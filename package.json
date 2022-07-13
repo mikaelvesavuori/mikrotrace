@@ -1,0 +1,57 @@
+{
+  "name": "mikrotrace",
+  "description": "Tracing the easy way using JSON.",
+  "version": "0.0.2",
+  "author": "Mikael Vesavuori",
+  "license": "MIT",
+  "main": "./lib/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mikaelvesavuori/mikrotrace.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/mikaelvesavuori/mikrotrace/issues"
+  },
+  "homepage": "https://github.com/mikaelvesavuori/mikrotrace#readme",
+  "files": [
+    "/lib",
+    "!/lib/**/*.map",
+    "!/tests"
+  ],
+  "scripts": {
+    "start": "npx ts-node src/index.ts",
+    "test": "npx c8 ava",
+    "build": "npm run clean && npx tsc --project tsconfig.build.json",
+    "clean": "rm -rf lib",
+    "package": "npm pack"
+  },
+  "devDependencies": {
+    "@ava/typescript": "3",
+    "@types/node": "18",
+    "@typescript-eslint/eslint-plugin": "5",
+    "@typescript-eslint/parser": "5",
+    "ava": "4",
+    "c8": "7",
+    "eslint": "8",
+    "eslint-config-prettier": "8",
+    "eslint-plugin-prettier": "4",
+    "prettier": "2",
+    "ts-node": "10",
+    "typescript": "4"
+  },
+  "ava": {
+    "typescript": {
+      "rewritePaths": {
+        "src/": "lib/"
+      },
+      "compile": false
+    },
+    "files": [
+      "tests/*.ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
+  }
+}
