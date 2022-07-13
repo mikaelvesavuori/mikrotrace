@@ -1,7 +1,7 @@
 {
   "name": "mikrotrace",
   "description": "Tracing the easy way using JSON.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Mikael Vesavuori",
   "license": "MIT",
   "main": "./lib/index.js",
