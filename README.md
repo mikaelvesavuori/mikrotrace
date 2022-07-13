@@ -10,7 +10,7 @@
 
 [![codecov](https://codecov.io/gh/mikaelvesavuori/mikrotrace/branch/main/graph/badge.svg?token=S7D3RM9TO7)](https://codecov.io/gh/mikaelvesavuori/mikrotrace)
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/d960f299a99a79f781d3/maintainability)](https://codeclimate.com/github/mikaelvesavuori/mikrotrace/maintainability)
+[![Maintainability](https://api.codeclimate.com/v1/badges/15a30d2b3f679507fdd0/maintainability)](https://codeclimate.com/github/mikaelvesavuori/mikrotrace/maintainability)
 
 ---
 

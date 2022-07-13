@@ -9,7 +9,16 @@
     "type": "git",
     "url": "git+https://github.com/mikaelvesavuori/mikrotrace.git"
   },
-  "keywords": [],
+  "keywords": [
+    "tracing",
+    "tracer",
+    "json-tracer",
+    "aws",
+    "lambda",
+    "serverless-tracer",
+    "honeycomb",
+    "honeycombio"
+  ],
   "bugs": {
     "url": "https://github.com/mikaelvesavuori/mikrotrace/issues"
   },
