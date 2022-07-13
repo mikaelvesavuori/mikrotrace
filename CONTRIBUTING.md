@@ -20,7 +20,7 @@ Respect the below and I will be happy to merge your work and credit you for it.
 
 ### Tests
 
-- **Always include tests for additions or changes**. Aim for 100% coverage, but set a minimum bar to cover at least the main functionality. `MikroLog` should ideally have total code coverage of 95% or more. Your contribution will affect that score, so aim to keep it high(er)! :)
+- **Always include tests for additions or changes**. Aim for 100% coverage, but set a minimum bar to cover at least the main functionality. `MikroTrace` should ideally have total code coverage of 95% or more. Your contribution will affect that score, so aim to keep it high(er)! :)
 - It's encouraged to place any test data in the `testdata/` folder.
 - **Always check that all tests (including your new ones) are passing before making a pull request**.
 
