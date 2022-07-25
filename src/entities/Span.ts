@@ -27,8 +27,8 @@ export class Span {
     return {
       name: spanName,
       timestamp: new Date(timeNow).toISOString(),
+      timestampEpoch: `${timeNow}`,
       startTime: `${timeNow}`,
-      endTime: `${timeNow}`,
       durationMs: 0,
       spanName,
       spanParent: parentSpanName,
@@ -78,8 +78,6 @@ export class Span {
 
     // @ts-ignore
     delete config['startTime']; // Not needed in logs
-    // @ts-ignore
-    delete config['endTime']; // Not needed in logs
     // @ts-ignore
     if (!config['spanParentId']) delete config['spanParentId']; // Ensure this is completely erased if just empty
 

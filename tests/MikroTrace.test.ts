@@ -28,8 +28,8 @@ test('It should be able to get the configuration of a new span', async (t) => {
 
   // Check presence of dynamic fields
   t.true(configuration['startTime'] !== null);
-  t.true(configuration['endTime'] !== null);
   t.true(configuration['timestamp'] !== null);
+  t.true(configuration['timestampEpoch'] !== null);
   t.true(configuration['spanId'] !== null);
   t.true(configuration['traceId'] !== null);
 
@@ -37,9 +37,9 @@ test('It should be able to get the configuration of a new span', async (t) => {
   // @ts-ignore
   delete configuration['startTime'];
   // @ts-ignore
-  delete configuration['endTime'];
-  // @ts-ignore
   delete configuration['timestamp'];
+  // @ts-ignore
+  delete configuration['timestampEpoch'];
   // @ts-ignore
   delete configuration['spanId'];
   // @ts-ignore

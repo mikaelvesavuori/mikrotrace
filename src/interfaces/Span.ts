@@ -13,17 +13,17 @@ export interface SpanConfiguration {
    */
   name: string;
   /**
-   * Timestamp when initially called in RFC3339 format.
+   * Timestamp when initially called in ISO 8601 (RFC3339) format.
    */
   timestamp: string;
   /**
-   * Start time in Unix epoch. Same as `timestamp`.
+   * Timestamp when initially called in Unix epoch format.
+   */
+  timestampEpoch: string;
+  /**
+   * Start time in Unix epoch. Same as `timestampEpoch`.
    */
   startTime: string;
-  /**
-   * End time in Unix epoch.
-   */
-  endTime: string;
   /**
    * Duration of the span in milliseconds.
    */

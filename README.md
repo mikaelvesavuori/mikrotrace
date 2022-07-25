@@ -178,6 +178,7 @@ EXAMPLE OUTPUT BELOW
 const outputInnerSpan = {
   name: 'Call the User service and fetch a response',
   timestamp: '2022-06-26T16:11:41.977Z',
+  timestampEpoch: '1656252701000',
   durationMs: 0,
   spanName: 'Call the User service and fetch a response',
   spanParentId: '5dec9b5a-acda-4cdf-924f-f8cf6df236c2',
@@ -192,6 +193,7 @@ const outputInnerSpan = {
 const outputOuterSpan = {
   name: 'Greet a user',
   timestamp: '2022-06-26T16:11:41.977Z',
+  timestampEpoch: '1656252701000',
   durationMs: 1,
   spanName: 'Greet a user',
   spanId: '5dec9b5a-acda-4cdf-924f-f8cf6df236c2',
