@@ -87,8 +87,6 @@ export class MikroTrace {
    * @example tracer.setParentContext('')
    *
    * This value will be propagated to all future spans.
-   *
-   * @todo Verify that this works despite not being static
    */
   public setParentContext(parentContext: string): void {
     MikroTrace.parentContext = parentContext;
