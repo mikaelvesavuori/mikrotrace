@@ -37,7 +37,7 @@ export class Span {
       traceId: parentTraceId || randomUUID(),
       attributes: {},
       correlationId: correlationId || '',
-      service: service || '',
+      service: service,
       isEnded: false
     };
   }

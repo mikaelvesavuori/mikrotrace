@@ -2,27 +2,72 @@ import test from 'ava';
 
 import { MikroTrace } from '../src/index';
 
+import { basicTracer } from '../testdata/tracer';
+
 /**
  * POSITIVE TESTS
  */
-test('It should be able to create a new span with blank service name ', async (t) => {
-  const tracer = new MikroTrace({ serviceName: '' });
+test.serial('It should be able to create a new span with blank service name ', (t) => {
+  MikroTrace.start({ serviceName: 'MyService' });
+  const tracer = MikroTrace.start({ serviceName: '' });
   const span = tracer.start('My span');
 
   // @ts-ignore
   t.truthy(span);
 });
 
-test('It should be able to create a new span', async (t) => {
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+test.serial('It should be able to enrich the tracer post-initialization with service name', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
+  MikroTrace.enrich({ serviceName: 'My new service' });
+
+  t.deepEqual(tracer.getConfiguration(), {
+    serviceName: 'My new service',
+    spans: [],
+    correlationId: '',
+    parentContext: ''
+  });
+});
+
+test.serial(
+  'It should be able to enrich the tracer post-initialization with correlation ID',
+  (t) => {
+    const tracer = MikroTrace.start({ serviceName: 'My service' });
+    MikroTrace.enrich({ correlationId: 'abc123' });
+
+    t.deepEqual(tracer.getConfiguration(), {
+      serviceName: 'My service',
+      spans: [],
+      correlationId: 'abc123',
+      parentContext: ''
+    });
+  }
+);
+
+test.serial(
+  'It should be able to enrich the tracer post-initialization with parent context',
+  (t) => {
+    const tracer = MikroTrace.start({ serviceName: 'My service' });
+    MikroTrace.enrich({ parentContext: 'qwerty' });
+
+    t.deepEqual(tracer.getConfiguration(), {
+      serviceName: 'My service',
+      spans: [],
+      correlationId: '',
+      parentContext: 'qwerty'
+    });
+  }
+);
+
+test.serial('It should be able to create a new span', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
 
   // @ts-ignore
   t.truthy(span);
 });
 
-test('It should be able to get the configuration of a new span', async (t) => {
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+test.serial('It should be able to get the configuration of a new span', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
   const configuration = span.getConfiguration();
 
@@ -61,8 +106,8 @@ test('It should be able to get the configuration of a new span', async (t) => {
   t.deepEqual(configuration, expected);
 });
 
-test('It should be able to create a nested span', async (t) => {
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+test.serial('It should be able to create a nested span', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
   const innerSpan = tracer.start('My inner span');
 
@@ -75,31 +120,38 @@ test('It should be able to create a nested span', async (t) => {
   t.is(parentId, id);
 });
 
-test('It should be able to end a span', async (t) => {
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+test.serial('It should be able to end a span', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
   span.end();
   const isEnded = span.getConfiguration().isEnded;
   t.deepEqual(isEnded, true);
 });
 
-test('It should be able to remove a span', async (t) => {
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+test.serial('It should be able to remove a span', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
+  tracer.start('My span');
   tracer.removeSpan('My span');
-  t.deepEqual(JSON.stringify(tracer), `{"parentContext":"","serviceName":"My service","spans":[]}`);
+
+  t.deepEqual(tracer.getConfiguration(), {
+    correlationId: '',
+    parentContext: 'My span',
+    serviceName: 'My service',
+    spans: []
+  });
 });
 
-test('It should be able to end all spans', async (t) => {
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+test.serial('It should be able to end all spans', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   tracer.start('My span');
   tracer.start('My extra span');
   tracer.endAll();
-  t.deepEqual(JSON.stringify(tracer), `{"parentContext":"","serviceName":"My service","spans":[]}`);
+  t.deepEqual(tracer.getConfiguration(), basicTracer);
 });
 
-test('It should be able to set the parent context', async (t) => {
+test.serial('It should be able to set the parent context', (t) => {
   const expected = 'My inner span';
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
 
   const span = tracer.start('My span');
   const innerSpan = tracer.start('My inner span');
@@ -108,15 +160,15 @@ test('It should be able to set the parent context', async (t) => {
   span.end();
   innerSpan.end();
 
-  t.deepEqual(
-    JSON.stringify(tracer),
-    `{"parentContext":"My inner span","serviceName":"My service","spans":[]}`
-  );
+  const _basicTracer = JSON.parse(JSON.stringify(basicTracer));
+  _basicTracer.parentContext = expected;
+
+  t.deepEqual(tracer.getConfiguration(), _basicTracer);
 });
 
-test('It should be able to set the parent span name to an existing span', async (t) => {
+test.serial('It should be able to set the parent span name to an existing span', (t) => {
   const expected = 'My span';
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
 
   const span = tracer.start(expected);
   const innerSpan = tracer.start('My inner span', expected);
@@ -127,11 +179,11 @@ test('It should be able to set the parent span name to an existing span', async 
   t.deepEqual(innerSpan.getConfiguration().spanParent, expected);
 });
 
-test('It should be able to set the correlation ID post-initialization', async (t) => {
+test.serial('It should be able to set the correlation ID post-initialization', (t) => {
   const expected = '1234-asdf-qwerty-foo-BAR';
 
-  const tracer = new MikroTrace({ serviceName: 'My service' });
-  tracer.setCorrelationId(expected);
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
+  MikroTrace.setCorrelationId(expected);
   const span = tracer.start('My span');
   const config = span.getConfiguration();
   const { correlationId } = config;
@@ -139,10 +191,10 @@ test('It should be able to set the correlation ID post-initialization', async (t
   t.is(correlationId, expected);
 });
 
-test('It should be able to set the correlation ID at the time of initialization', async (t) => {
+test.serial('It should be able to set the correlation ID at the time of initialization', (t) => {
   const expected = '1234-asdf-qwerty-foo-BAR';
 
-  const tracer = new MikroTrace({ correlationId: expected, serviceName: 'My service' });
+  const tracer = MikroTrace.start({ correlationId: expected, serviceName: 'My service' });
   const span = tracer.start('My span');
   const config = span.getConfiguration();
   const { correlationId } = config;
@@ -150,10 +202,10 @@ test('It should be able to set the correlation ID at the time of initialization'
   t.is(correlationId, expected);
 });
 
-test('It should be able to set a single custom attribute', async (t) => {
+test.serial('It should be able to set a single custom attribute', (t) => {
   const expected = 'some value';
 
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
   span.setAttribute('key', expected);
   const config = span.getConfiguration();
@@ -162,13 +214,13 @@ test('It should be able to set a single custom attribute', async (t) => {
   t.is(attributes['key'], expected);
 });
 
-test('It should be able to set multiple custom attributes', async (t) => {
+test.serial('It should be able to set multiple custom attributes', (t) => {
   const expected = {
     something: 123,
     someKey: 'someValue'
   };
 
-  const tracer = new MikroTrace({ serviceName: 'My service' });
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
   span.setAttributes(expected);
   const config = span.getConfiguration();
@@ -181,36 +233,45 @@ test('It should be able to set multiple custom attributes', async (t) => {
  * NEGATIVE TESTS
  */
 
-test('It should throw a MissingSpanNameError if trying to create a span without a name', async (t) => {
-  const error: any = t.throws(() => {
-    const tracer = new MikroTrace({ serviceName: 'My service' });
-    // @ts-ignore
-    tracer.start();
-  });
+test.serial(
+  'It should throw a MissingSpanNameError if trying to create a span without a name',
+  (t) => {
+    const error: any = t.throws(() => {
+      const tracer = MikroTrace.start({ serviceName: 'My service' });
+      // @ts-ignore
+      tracer.start();
+    });
 
-  t.is(error.name, 'MissingSpanNameError');
-});
+    t.is(error.name, 'MissingSpanNameError');
+  }
+);
 
-test('It should throw a MissingParentSpanError if trying to make a nested span using a non-existent span', async (t) => {
-  const error: any = t.throws(() => {
-    const tracer = new MikroTrace({ serviceName: 'My service' });
-    const span = tracer.start('My span');
-    const innerSpan = tracer.start('My inner span', 'DoesNotExist');
-    innerSpan.end();
-    span.end();
-  });
+test.serial(
+  'It should throw a MissingParentSpanError if trying to make a nested span using a non-existent span',
+  (t) => {
+    const error: any = t.throws(() => {
+      const tracer = MikroTrace.start({ serviceName: 'My service' });
+      const span = tracer.start('My span');
+      const innerSpan = tracer.start('My inner span', 'DoesNotExist');
+      innerSpan.end();
+      span.end();
+    });
 
-  t.is(error.name, 'MissingParentSpanError');
-});
+    t.is(error.name, 'MissingParentSpanError');
+  }
+);
 
-test('It should throw a SpanAlreadyExistsError if trying to make a nested span using a non-existent span', async (t) => {
-  const error: any = t.throws(() => {
-    const tracer = new MikroTrace({ serviceName: 'My service' });
-    const span = tracer.start('My span');
-    const innerSpan = tracer.start('My span', 'DoesNotExist');
-    innerSpan.end();
-    span.end();
-  });
+test.serial(
+  'It should throw a SpanAlreadyExistsError if trying to make a nested span using a non-existent span',
+  (t) => {
+    const error: any = t.throws(() => {
+      const tracer = MikroTrace.start({ serviceName: 'My service' });
+      const span = tracer.start('My span');
+      const innerSpan = tracer.start('My span', 'DoesNotExist');
+      innerSpan.end();
+      span.end();
+    });
 
-  t.is(error.name, 'SpanAlreadyExistsError');
-});
+    t.is(error.name, 'SpanAlreadyExistsError');
+  }
+);

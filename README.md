@@ -23,17 +23,17 @@ So what do you get with MikroTrace?
 - Works perfectly with AWS and Honeycomb
 - It removes the need to pass in complete instances into the span functions, instead use plain strings to refer to spans
 - Uses `process.stdout.write()` rather than `console.log()` so you can safely use it in Lambda
-- Tiny (1.5 KB gzipped)
+- Tiny (~2 KB gzipped)
 - Has zero dependencies
 - Has 100% test coverage
 
 ## Behavior
 
-Make sure to reuse the same instance across your application to get it working as intended.
+When you run `MikroTrace.start({ ...your input })` with input, this will override any previously set configuration. When run without input, i.e. `MikroTrace.start()`, you can reuse the same instance again, making it easier to use across an application without having to pass the instance around. Make sure to end any spans before doing this.
 
 MikroTrace will set the parent context automatically but you can override this. See the below `Usage` section for more on this.
 
-MikroTrace only supports a single tracing context per instance.
+MikroTrace only supports a single tracing context. Use the `MikroTrace.start()` functionality to get a new clean slate if needed.
 
 ## Usage
 
@@ -45,13 +45,13 @@ const { MikroTrace } = require('mikrotrace');
 // ES6 format
 import { MikroTrace } from 'mikrotrace';
 
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 ```
 
 ### Create nested span
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 
 const span = tracer.start('My span');
 const innerSpan = tracer.start('My inner span');
@@ -62,7 +62,7 @@ span.end();
 ### End all spans at once
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 
 tracer.start('My span');
 tracer.start('My extra span');
@@ -72,7 +72,7 @@ tracer.endAll();
 ### Set a single attribute
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 
 const span = tracer.start('My span');
 span.setAttribute('key', 'some value');
@@ -81,7 +81,7 @@ span.setAttribute('key', 'some value');
 ### Set multiple attributes
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 
 const span = tracer.start('My span');
 span.setAttributes({ something: 'my thing here', abc: 123 });
@@ -90,7 +90,7 @@ span.setAttributes({ something: 'my thing here', abc: 123 });
 ### Get the configuration of a span
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 
 const span = tracer.start('My span');
 const config = span.getConfiguration();
@@ -98,27 +98,44 @@ const config = span.getConfiguration();
 
 ### Configuration
 
-#### Set the correlation ID for the tracer
+#### Set the correlation ID for the tracer at start
 
 ```typescript
-const tracer = new MikroTrace({ correlationId: 'abc-123', serviceName: 'My service' });
+const tracer = MikroTrace.start({ correlationId: 'abc-123', serviceName: 'My service' });
 ```
 
 #### Set the correlation ID for the tracer after instantiation
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 tracer.setCorrelationId('abc-123');
 ```
 
 #### Set the parent context manually
 
 ```typescript
-const tracer = new MikroTrace({ serviceName: 'My service' });
+const tracer = MikroTrace.start({ serviceName: 'My service' });
 
 const span = tracer.start('My span');
 tracer.setParentContext('Some other context');
 span.end();
+```
+
+#### Enrich the tracer with correlation ID, service name, or parent context without creating a new instance
+
+```typescript
+const tracer = MikroTrace.enrich({
+  serviceName: 'My new service',
+  correlationId: 'qwerty-137',
+  parentContext: 'some-other-parent'
+});
+```
+
+#### Output the tracer configuration, for example for debugging purposes
+
+```typescript
+const tracer = MikroTrace.start({ serviceName: 'My service' });
+const tracerConfig = tracer.getConfiguration();
 ```
 
 ## Demo
@@ -141,7 +158,7 @@ const spanNames = {
  * The tracer instance that you will reuse in your application.
  * The correlation ID is not required but is _highly_ recommended.
  */
-const tracer = new MikroTrace({ serviceName: 'MyService', correlationId: 'your-correlation-id' });
+const tracer = MikroTrace.start({ serviceName: 'MyService', correlationId: 'your-correlation-id' });
 /**
  * You may also set the correlation ID after instantiation:
  * @example tracer.setCorrelationId('your-correlation-id');

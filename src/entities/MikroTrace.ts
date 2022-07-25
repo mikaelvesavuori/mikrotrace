@@ -1,5 +1,5 @@
 import { Span } from './Span';
-import { SpanRepresentation, MikroTraceInput } from '../interfaces/Tracer';
+import { SpanRepresentation, MikroTraceInput, MikroTraceEnrichInput } from '../interfaces/Tracer';
 
 import {
   MissingParentSpanError,
@@ -21,16 +21,48 @@ import {
  * span functions. Use strings to refer to spans.
  */
 export class MikroTrace {
-  private serviceName: string;
-  private spans: SpanRepresentation[];
-  private correlationId?: string;
-  private parentContext = '';
+  private static instance: MikroTrace;
+  private static serviceName: string;
+  private static spans: SpanRepresentation[];
+  private static correlationId?: string;
+  private static parentContext = '';
 
-  constructor(input: MikroTraceInput) {
-    const { serviceName } = input;
-    this.serviceName = serviceName;
-    this.spans = [];
-    if (input.correlationId) this.setCorrelationId(input.correlationId);
+  private constructor() {
+    MikroTrace.spans = [];
+    MikroTrace.serviceName = '';
+    MikroTrace.correlationId = '';
+    MikroTrace.parentContext = '';
+  }
+
+  /**
+   * @description This instantiates MikroTrace. In order to be able
+   * to "remember" event and context we use a singleton pattern to
+   * reuse the same logical instance.
+   *
+   * If the `start` method receives any input, that input will
+   * overwrite any existing metadata.
+   *
+   * If you want to "add" to these, you should instead call
+   * `enrich()` and pass in your additional data there.
+   */
+  public static start(input?: MikroTraceInput) {
+    if (!MikroTrace.instance) MikroTrace.instance = new MikroTrace();
+    if (input) {
+      MikroTrace.spans = [];
+      MikroTrace.serviceName = input.serviceName || '';
+      MikroTrace.correlationId = input.correlationId || '';
+      MikroTrace.parentContext = input.parentContext || '';
+    }
+    return MikroTrace.instance;
+  }
+
+  /**
+   * @description Enrich MikroTrace with values post-initialization.
+   */
+  public static enrich(input: MikroTraceEnrichInput) {
+    if (input.serviceName) MikroTrace.serviceName = input.serviceName;
+    if (input.correlationId) MikroTrace.setCorrelationId(input.correlationId);
+    if (input.parentContext) MikroTrace.parentContext = input.parentContext;
   }
 
   /**
@@ -40,8 +72,8 @@ export class MikroTrace {
    *
    * This value will be propagated to all future spans.
    */
-  public setCorrelationId(correlationId: string): void {
-    this.correlationId = correlationId;
+  public static setCorrelationId(correlationId: string): void {
+    MikroTrace.correlationId = correlationId;
   }
 
   /**
@@ -55,9 +87,24 @@ export class MikroTrace {
    * @example tracer.setParentContext('')
    *
    * This value will be propagated to all future spans.
+   *
+   * @todo Verify that this works despite not being static
    */
   public setParentContext(parentContext: string): void {
-    this.parentContext = parentContext;
+    MikroTrace.parentContext = parentContext;
+  }
+
+  /**
+   * @description Output the tracer configuration, for
+   * example for debugging needs.
+   */
+  public getConfiguration() {
+    return {
+      serviceName: MikroTrace.serviceName,
+      spans: MikroTrace.spans,
+      correlationId: MikroTrace.correlationId,
+      parentContext: MikroTrace.parentContext
+    };
   }
 
   /**
@@ -65,7 +112,7 @@ export class MikroTrace {
    */
   private getSpan(spanName: string): SpanRepresentation | null {
     const span: SpanRepresentation =
-      this.spans.filter((span: SpanRepresentation) => span.spanName === spanName)[0] || null;
+      MikroTrace.spans.filter((span: SpanRepresentation) => span.spanName === spanName)[0] || null;
     return span;
   }
 
@@ -76,8 +123,8 @@ export class MikroTrace {
    */
   private getParentIds(spanName: string, parentSpanName?: string) {
     // This instance looks fresh so let's set the parent as the current one for later spans
-    if (!this.parentContext) this.setParentContext(spanName);
-    const parentContext = this.parentContext;
+    if (!MikroTrace.parentContext) this.setParentContext(spanName);
+    const parentContext = MikroTrace.parentContext;
 
     // Return values for new parent context
     if (parentSpanName) {
@@ -118,10 +165,10 @@ export class MikroTrace {
    * make the necessary call when having ended a span.
    */
   public removeSpan(spanName: string): void {
-    const spans: SpanRepresentation[] = this.spans.filter(
+    const spans: SpanRepresentation[] = MikroTrace.spans.filter(
       (span: SpanRepresentation) => span.spanName !== spanName
     );
-    this.spans = spans;
+    MikroTrace.spans = spans;
   }
 
   /**
@@ -152,8 +199,8 @@ export class MikroTrace {
 
     const newSpan = new Span({
       tracer: this,
-      correlationId: this.correlationId,
-      service: this.serviceName,
+      correlationId: MikroTrace.correlationId,
+      service: MikroTrace.serviceName,
       spanName,
       parentSpanId,
       parentTraceId,
@@ -162,7 +209,7 @@ export class MikroTrace {
 
     // Store local representation so we can make lookups for relations.
     const { spanId, traceId } = newSpan.getConfiguration();
-    this.spans.push({
+    MikroTrace.spans.push({
       spanName,
       spanId: spanId,
       traceId: traceId,
@@ -179,7 +226,7 @@ export class MikroTrace {
    * when you need to close all spans in case of an error.
    */
   public endAll(): void {
-    this.spans.forEach((spanRep: SpanRepresentation) => spanRep.reference.end());
+    MikroTrace.spans.forEach((spanRep: SpanRepresentation) => spanRep.reference.end());
     this.setParentContext('');
   }
 }

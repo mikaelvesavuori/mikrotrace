@@ -10,6 +10,15 @@ export interface MikroTraceInput {
 }
 
 /**
+ * @description Input when enriching a `MikroTrace` instance.
+ */
+export interface MikroTraceEnrichInput {
+  serviceName?: string;
+  correlationId?: string;
+  parentContext?: string;
+}
+
+/**
  * @description This is how `MikroTrace` will represent each
  * new span. `MikroTrace` will make certain lookups to process
  * parent-child relationships.
