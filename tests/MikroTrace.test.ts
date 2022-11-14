@@ -31,7 +31,6 @@ test.serial('It should be able to create a new span with blank service name ', (
   const tracer = MikroTrace.start({ serviceName: '' });
   const span = tracer.start('My span');
 
-  // @ts-ignore
   t.truthy(span);
 });
 
@@ -81,15 +80,25 @@ test.serial('It should be able to create a new span', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
 
-  // @ts-ignore
   t.truthy(span);
 });
 
-test.serial('It should be able to get the configuration of a new span with AWS metadata', (t) => {
+test.serial('It should set custom static metadata', (t) => {
   setEnv();
-  const tracer = MikroTrace.start({ serviceName: 'My service', event, context });
+  const metadataConfig = {
+    version: 1,
+    hostPlatform: 'aws',
+    owner: 'MyCompany',
+    domain: 'MyDomain',
+    system: 'MySystem',
+    team: 'MyTeam',
+    tags: ['backend', 'typescript', 'api', 'serverless', 'my-service'],
+    dataSensitivity: 'proprietary'
+  };
+
+  const tracer = MikroTrace.start({ serviceName: 'My service', event, context, metadataConfig });
   const span = tracer.start('My span');
-  const configuration = span.getConfiguration();
+  const configuration: any = span.getConfiguration();
 
   // Check presence of dynamic fields
   t.true(configuration['startTime'] !== null);
@@ -99,15 +108,63 @@ test.serial('It should be able to get the configuration of a new span with AWS m
   t.true(configuration['traceId'] !== null);
 
   // Drop dynamic fields for test validation
-  // @ts-ignore
   delete configuration['startTime'];
-  // @ts-ignore
   delete configuration['timestamp'];
-  // @ts-ignore
   delete configuration['timestampEpoch'];
-  // @ts-ignore
   delete configuration['spanId'];
-  // @ts-ignore
+  delete configuration['traceId'];
+
+  const expected = {
+    accountId: '123412341234',
+    attributes: {},
+    correlationId: '6c933bd2-9535-45a8-b09c-84d00b4f50cc',
+    dataSensitivity: 'proprietary',
+    domain: 'MyDomain',
+    durationMs: 0,
+    functionMemorySize: '1024',
+    functionName: 'somestack-FunctionName',
+    functionVersion: '$LATEST',
+    hostPlatform: 'aws',
+    isEnded: false,
+    owner: 'MyCompany',
+    region: 'eu-north-1',
+    resource: '/functionName',
+    runtime: 'AWS_Lambda_nodejs16.x',
+    service: 'My service',
+    spanName: 'My span',
+    stage: 'shared',
+    system: 'MySystem',
+    tags: ['backend', 'typescript', 'api', 'serverless', 'my-service'],
+    team: 'MyTeam',
+    timestampRequest: '1657389598171',
+    user: 'some user',
+    version: 1,
+    viewerCountry: 'SE'
+  };
+
+  t.deepEqual(configuration, expected);
+
+  clearEnv();
+});
+
+test.serial('It should be able to get the configuration of a new span with AWS metadata', (t) => {
+  setEnv();
+  const tracer = MikroTrace.start({ serviceName: 'My service', event, context });
+  const span = tracer.start('My span');
+  const configuration: any = span.getConfiguration();
+
+  // Check presence of dynamic fields
+  t.true(configuration['startTime'] !== null);
+  t.true(configuration['timestamp'] !== null);
+  t.true(configuration['timestampEpoch'] !== null);
+  t.true(configuration['spanId'] !== null);
+  t.true(configuration['traceId'] !== null);
+
+  // Drop dynamic fields for test validation
+  delete configuration['startTime'];
+  delete configuration['timestamp'];
+  delete configuration['timestampEpoch'];
+  delete configuration['spanId'];
   delete configuration['traceId'];
 
   const expected = {
@@ -130,7 +187,6 @@ test.serial('It should be able to get the configuration of a new span with AWS m
     viewerCountry: 'SE'
   };
 
-  // @ts-ignore
   t.deepEqual(configuration, expected);
 
   clearEnv();
@@ -141,7 +197,7 @@ test.serial(
   (t) => {
     const tracer = MikroTrace.start({ serviceName: 'My service' });
     const span = tracer.start('My span');
-    const configuration = span.getConfiguration();
+    const configuration: any = span.getConfiguration();
 
     // Check presence of dynamic fields
     t.true(configuration['startTime'] !== null);
@@ -151,15 +207,10 @@ test.serial(
     t.true(configuration['traceId'] !== null);
 
     // Drop dynamic fields for test validation
-    // @ts-ignore
     delete configuration['startTime'];
-    // @ts-ignore
     delete configuration['timestamp'];
-    // @ts-ignore
     delete configuration['timestampEpoch'];
-    // @ts-ignore
     delete configuration['spanId'];
-    // @ts-ignore
     delete configuration['traceId'];
 
     const expected = {
@@ -170,7 +221,6 @@ test.serial(
       spanName: 'My span'
     };
 
-    // @ts-ignore
     t.deepEqual(configuration, expected);
   }
 );
@@ -279,6 +329,7 @@ test.serial('It should be able to set a single custom attribute', (t) => {
   span.setAttribute('key', expected);
   const config = span.getConfiguration();
   const { attributes } = config;
+  span.end();
 
   t.is(attributes['key'], expected);
 });

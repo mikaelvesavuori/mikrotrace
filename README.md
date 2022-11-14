@@ -48,7 +48,7 @@ import { MikroTrace } from 'mikrotrace';
 const tracer = MikroTrace.start({ serviceName: 'My service' });
 ```
 
-### Enriching the tracer with metadata from AWS
+### Adding metadata from AWS
 
 ```typescript
 import { MikroTrace } from 'mikrotrace';
@@ -86,6 +86,26 @@ EXAMPLE OUTPUT BELOW
   isEnded: false
 }
 */
+```
+
+### Adding custom static metadata
+
+```typescript
+import { MikroTrace } from 'mikrotrace';
+
+// Add custom metadata
+const metadataConfig = {
+  version: 1,
+  hostPlatform: 'aws',
+  owner: 'MyCompany',
+  domain: 'MyDomain',
+  system: 'MySystem',
+  team: 'MyTeam',
+  tags: ['backend', 'typescript', 'api', 'serverless', 'my-service'],
+  dataSensitivity: 'proprietary'
+};
+
+const tracer = MikroTrace.start({ serviceName: 'My service', metadataConfig });
 ```
 
 ### Create nested span

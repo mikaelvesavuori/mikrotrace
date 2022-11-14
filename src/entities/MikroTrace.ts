@@ -1,7 +1,9 @@
 import { getMetadata } from 'aws-metadata-utils';
 
 import { Span } from './Span';
+
 import { SpanRepresentation, MikroTraceInput, MikroTraceEnrichInput } from '../interfaces/Tracer';
+import { StaticMetadataConfigInput } from '../interfaces/Metadata';
 
 import {
   MissingParentSpanError,
@@ -24,6 +26,7 @@ import {
  */
 export class MikroTrace {
   private static instance: MikroTrace;
+  private static metadataConfig: StaticMetadataConfigInput | Record<string, any> = {};
   private static serviceName: string;
   private static spans: SpanRepresentation[];
   private static correlationId?: string;
@@ -32,6 +35,7 @@ export class MikroTrace {
   private static context: any;
 
   private constructor(event: any, context: any) {
+    MikroTrace.metadataConfig = {};
     MikroTrace.spans = [];
     MikroTrace.serviceName = '';
     MikroTrace.correlationId = '';
@@ -60,6 +64,7 @@ export class MikroTrace {
 
     if (!MikroTrace.instance) MikroTrace.instance = new MikroTrace(event, context);
 
+    MikroTrace.metadataConfig = input?.metadataConfig || {};
     MikroTrace.spans = [];
     MikroTrace.serviceName = serviceName;
     MikroTrace.correlationId = correlationId;
@@ -208,17 +213,18 @@ export class MikroTrace {
     if (spanExists) throw new SpanAlreadyExistsError(spanName);
 
     const { parentSpanId, parentTraceId } = this.getParentIds(spanName, parentSpanName);
-    const metadata = getMetadata(MikroTrace.event, MikroTrace.context);
+    const dynamicMetadata = getMetadata(MikroTrace.event, MikroTrace.context);
 
     const newSpan = new Span({
+      dynamicMetadata,
+      staticMetadata: MikroTrace.metadataConfig,
       tracer: this,
-      correlationId: MikroTrace.correlationId || metadata.correlationId,
-      service: MikroTrace.serviceName,
+      correlationId: MikroTrace.correlationId || dynamicMetadata.correlationId,
+      service: MikroTrace.serviceName || MikroTrace.metadataConfig.service,
       spanName,
       parentSpanId,
       parentTraceId,
-      parentSpanName,
-      metadata
+      parentSpanName
     });
 
     // Store local representation so we can make lookups for relations.

@@ -28,12 +28,14 @@ export class Span {
       parentTraceId,
       correlationId,
       service,
-      metadata
+      staticMetadata,
+      dynamicMetadata
     } = input;
     const timeNow = Date.now();
 
     return this.filterMetadata({
-      ...metadata,
+      ...staticMetadata,
+      ...dynamicMetadata,
       timestamp: new Date(timeNow).toISOString(),
       timestampEpoch: `${timeNow}`,
       startTime: `${timeNow}`,

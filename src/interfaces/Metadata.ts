@@ -1,4 +1,52 @@
 /**
+ * @description User-provided static metadata input.
+ */
+export interface StaticMetadataConfigInput {
+  /**
+   * @description The version of the running service.
+   */
+  version: number;
+  /**
+   * @description The organization that owns this system.
+   */
+  owner: string;
+  /**
+   * @description The host platform or infrastructure that runs the system.
+   */
+  hostPlatform: string;
+  /**
+   * @description Domain of the producer system.
+   */
+  domain: string;
+  /**
+   * @description System of the producer.
+   */
+  system: string;
+  /**
+   * @description Service of the producer.
+   */
+  service: string;
+  /**
+   * @description Team responsible for emitting this log.
+   */
+  team: string;
+  /**
+   * @description Tags for the logged system.
+   */
+  tags?: string[];
+  /**
+   * @description Data sensitivity classification for the contents of this metric.
+   * @example `public`, `proprietary`, `confidential`, `secret`
+   */
+  dataSensitivity?: string;
+  /**
+   * @description What legal jurisdiction does this system fall into?
+   * @example `EU`, `US`, `CN`
+   */
+  jurisdiction?: string;
+}
+
+/**
  * @description Dynamic AWS metadata.
  */
 export type DynamicMetadata = {

@@ -1,5 +1,5 @@
 import { MikroTrace } from '../entities/MikroTrace';
-import { DynamicMetadata } from './DynamicMetadata';
+import { DynamicMetadata } from './Metadata';
 
 /**
  * @description The configuration shape of a `Span`. This configuration is
@@ -95,7 +95,11 @@ export type SpanInput = {
    */
   parentSpanName?: string;
   /**
-   * AWS metadata
+   * Dynamic AWS metadata.
    */
-  metadata?: Record<string, any>;
+  dynamicMetadata?: Record<string, any>;
+  /**
+   * Static user-provided metadata.
+   */
+  staticMetadata?: Record<string, any>;
 };

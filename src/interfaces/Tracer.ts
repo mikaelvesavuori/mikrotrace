@@ -1,11 +1,22 @@
 import { Span } from '../entities/Span';
 
+import { StaticMetadataConfigInput } from './Metadata';
+
 /**
  * @description Input when creating a new `MikroTrace` instance.
  */
 export interface MikroTraceInput {
+  /**
+   * @description Name of the running service.
+   */
   serviceName: string;
+  /**
+   * @description Correlation ID.
+   */
   correlationId?: string;
+  /**
+   * @description What is the parent context?
+   */
   parentContext?: string;
   /**
    * @description AWS `event` object.
@@ -15,14 +26,27 @@ export interface MikroTraceInput {
    * @description AWS `context` object.
    */
   context?: any;
+  /**
+   * Static metadata configuration object.
+   */
+  metadataConfig?: StaticMetadataConfigInput | Record<string, any>;
 }
 
 /**
  * @description Input when enriching a `MikroTrace` instance.
  */
 export interface MikroTraceEnrichInput {
+  /**
+   * @description Name of the running service.
+   */
   serviceName?: string;
+  /**
+   * @description Correlation ID.
+   */
   correlationId?: string;
+  /**
+   * @description What is the parent context?
+   */
   parentContext?: string;
 }
 
@@ -32,8 +56,20 @@ export interface MikroTraceEnrichInput {
  * parent-child relationships.
  */
 export type SpanRepresentation = {
+  /**
+   * @description Name of the span.
+   */
   spanName: string;
+  /**
+   * @description Trace ID for this specific trace.
+   */
   traceId: string;
+  /**
+   * @description Span ID for this specific span.
+   */
   spanId: string;
+  /**
+   * @description The span to reference.
+   */
   reference: Span;
 };
