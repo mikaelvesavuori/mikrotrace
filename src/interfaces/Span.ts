@@ -7,13 +7,6 @@ import { DynamicMetadata } from './DynamicMetadata';
  */
 export type SpanConfiguration = DynamicMetadata & {
   /**
-   * Name of the span. Same as `spanName`.
-   * Used as a redundancy as Honeycomb and perhaps
-   * other tools might need to pick up on this field name.
-   * @example GreetUser
-   */
-  name: string;
-  /**
    * Timestamp when initially called in ISO 8601 (RFC3339) format.
    */
   timestamp: string;

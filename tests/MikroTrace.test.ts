@@ -91,8 +91,6 @@ test.serial('It should be able to get the configuration of a new span with AWS m
   const span = tracer.start('My span');
   const configuration = span.getConfiguration();
 
-  console.log('configuration', configuration);
-
   // Check presence of dynamic fields
   t.true(configuration['startTime'] !== null);
   t.true(configuration['timestamp'] !== null);
@@ -115,20 +113,17 @@ test.serial('It should be able to get the configuration of a new span with AWS m
   const expected = {
     accountId: '123412341234',
     attributes: {},
-    correlationId: '',
+    correlationId: '6c933bd2-9535-45a8-b09c-84d00b4f50cc',
     durationMs: 0,
     functionMemorySize: '1024',
     functionName: 'somestack-FunctionName',
     functionVersion: '$LATEST',
     isEnded: false,
-    name: 'My span',
     region: 'eu-north-1',
     resource: '/functionName',
     runtime: 'AWS_Lambda_nodejs16.x',
     service: 'My service',
     spanName: 'My span',
-    spanParent: undefined,
-    spanParentId: '',
     stage: 'shared',
     timestampRequest: '1657389598171',
     user: 'some user',
@@ -169,14 +164,10 @@ test.serial(
 
     const expected = {
       attributes: {},
-      correlationId: '',
       durationMs: 0,
       isEnded: false,
-      name: 'My span',
       service: 'My service',
-      spanName: 'My span',
-      spanParent: undefined,
-      spanParentId: ''
+      spanName: 'My span'
     };
 
     // @ts-ignore

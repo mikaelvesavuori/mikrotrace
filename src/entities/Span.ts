@@ -32,9 +32,8 @@ export class Span {
     } = input;
     const timeNow = Date.now();
 
-    return {
+    return this.filterMetadata({
       ...metadata,
-      name: spanName,
       timestamp: new Date(timeNow).toISOString(),
       timestampEpoch: `${timeNow}`,
       startTime: `${timeNow}`,
@@ -48,7 +47,7 @@ export class Span {
       correlationId: correlationId || '',
       service: service,
       isEnded: false
-    };
+    });
   }
 
   /**
@@ -108,5 +107,19 @@ export class Span {
       .forEach(([key, value]) => (sortedOutput[key] = value));
 
     return sortedOutput;
+  }
+
+  /**
+   * @description Filter metadata from empties.
+   */
+  private filterMetadata(metadata: Record<string, any>) {
+    const filteredMetadata: any = {};
+
+    Object.entries(metadata).forEach((entry: any) => {
+      const [key, value] = entry;
+      if (value || value === 0 || value === false) filteredMetadata[key] = value;
+    });
+
+    return filteredMetadata;
   }
 }

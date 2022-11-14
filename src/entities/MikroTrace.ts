@@ -208,12 +208,11 @@ export class MikroTrace {
     if (spanExists) throw new SpanAlreadyExistsError(spanName);
 
     const { parentSpanId, parentTraceId } = this.getParentIds(spanName, parentSpanName);
-
-    const metadata = this.filterMetadata(getMetadata(MikroTrace.event, MikroTrace.context));
+    const metadata = getMetadata(MikroTrace.event, MikroTrace.context);
 
     const newSpan = new Span({
       tracer: this,
-      correlationId: MikroTrace.correlationId,
+      correlationId: MikroTrace.correlationId || metadata.correlationId,
       service: MikroTrace.serviceName,
       spanName,
       parentSpanId,
@@ -243,19 +242,5 @@ export class MikroTrace {
   public endAll(): void {
     MikroTrace.spans.forEach((spanRep: SpanRepresentation) => spanRep.reference.end());
     this.setParentContext('');
-  }
-
-  /**
-   * @description Filter metadata from empties.
-   */
-  private filterMetadata(metadata: Record<string, any>) {
-    const filteredMetadata: any = {};
-
-    Object.entries(metadata).forEach((entry: any) => {
-      const [key, value] = entry;
-      if (value) filteredMetadata[key] = value;
-    });
-
-    return filteredMetadata;
   }
 }
