@@ -24,7 +24,7 @@ So what do you get with MikroTrace?
 - It removes the need to pass in complete instances into the span functions, instead use plain strings to refer to spans
 - Uses `process.stdout.write()` rather than `console.log()` so you can safely use it in Lambda
 - Tiny (~1.7 KB gzipped)
-- Has zero dependencies
+- Has only one dependency, [`aws-metadata-utils`](https://github.com/mikaelvesavuori/aws-metadata-utils) (for picking out metadata)
 - Has 100% test coverage
 
 ## Behavior
@@ -46,6 +46,47 @@ const { MikroTrace } = require('mikrotrace');
 import { MikroTrace } from 'mikrotrace';
 
 const tracer = MikroTrace.start({ serviceName: 'My service' });
+```
+
+### Enriching the tracer with metadata from AWS
+
+```typescript
+import { MikroTrace } from 'mikrotrace';
+
+// Add AWS event and context objects
+const tracer = MikroTrace.start({ serviceName: 'My service', event, context });
+
+/*
+EXAMPLE OUTPUT BELOW
+
+{
+  accountId: '123412341234',
+  correlationId: '',
+  functionMemorySize: '1024',
+  functionName: 'somestack-FunctionName',
+  functionVersion: '$LATEST',
+  region: 'eu-north-1',
+  resource: '/functionName',
+  runtime: 'AWS_Lambda_nodejs16.x',
+  stage: 'shared',
+  timestampRequest: '1657389598171',
+  user: 'some user',
+  viewerCountry: 'SE',
+  name: 'My span',
+  timestamp: '2022-11-14T12:28:46.842Z',
+  timestampEpoch: '1668428926842',
+  startTime: '1668428926842',
+  durationMs: 0,
+  spanName: 'My span',
+  spanParent: undefined,
+  spanParentId: '',
+  spanId: '3e9de004-c484-4776-8a97-a9267133194e',
+  traceId: '07c30259-d6c3-4269-b615-d176eff86a3f',
+  attributes: {},
+  service: 'My service',
+  isEnded: false
+}
+*/
 ```
 
 ### Create nested span
@@ -193,32 +234,32 @@ span.end();
 EXAMPLE OUTPUT BELOW
 
 const outputInnerSpan = {
-  name: 'Call the User service and fetch a response',
-  timestamp: '2022-06-26T16:11:41.977Z',
-  timestampEpoch: '1656252701000',
-  durationMs: 0,
-  spanName: 'Call the User service and fetch a response',
-  spanParentId: '5dec9b5a-acda-4cdf-924f-f8cf6df236c2',
-  spanId: 'd3a06fab-8f81-45c9-bcd8-e458e62a3ef9',
-  traceId: 'db62951b-d9a5-4fb6-adf0-10c360e6535f',
   attributes: {},
   correlationId: 'your-correlation-id',
+  durationMs: 0,
+  isEnded: true,
+  name: 'Call the User service and fetch a response',
   service: 'MyService',
-  isEnded: true
+  spanId: 'd3a06fab-8f81-45c9-bcd8-e458e62a3ef9',
+  spanName: 'Call the User service and fetch a response',
+  spanParentId: '5dec9b5a-acda-4cdf-924f-f8cf6df236c2',
+  timestamp: '2022-06-26T16:11:41.977Z',
+  timestampEpoch: '1656252701000',
+  traceId: 'db62951b-d9a5-4fb6-adf0-10c360e6535f'
 };
 
 const outputOuterSpan = {
-  name: 'Greet a user',
-  timestamp: '2022-06-26T16:11:41.977Z',
-  timestampEpoch: '1656252701000',
-  durationMs: 1,
-  spanName: 'Greet a user',
-  spanId: '5dec9b5a-acda-4cdf-924f-f8cf6df236c2',
-  traceId: 'db62951b-d9a5-4fb6-adf0-10c360e6535f',
   attributes: {},
   correlationId: 'your-correlation-id',
+  durationMs: 1,
+  isEnded: true,
+  name: 'Greet a user',
   service: 'MyService',
-  isEnded: true
+  spanId: '5dec9b5a-acda-4cdf-924f-f8cf6df236c2',
+  spanName: 'Greet a user',
+  timestamp: '2022-06-26T16:11:41.977Z',
+  timestampEpoch: '1656252701000',
+  traceId: 'db62951b-d9a5-4fb6-adf0-10c360e6535f'
 };
 */
 ```

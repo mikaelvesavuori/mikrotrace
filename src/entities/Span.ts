@@ -21,10 +21,19 @@ export class Span {
    * @description Produce a `Span`.
    */
   private produceSpan(input: SpanInput): SpanConfiguration {
-    const { spanName, parentSpanName, parentSpanId, parentTraceId, correlationId, service } = input;
+    const {
+      spanName,
+      parentSpanName,
+      parentSpanId,
+      parentTraceId,
+      correlationId,
+      service,
+      metadata
+    } = input;
     const timeNow = Date.now();
 
     return {
+      ...metadata,
       name: spanName,
       timestamp: new Date(timeNow).toISOString(),
       timestampEpoch: `${timeNow}`,
@@ -82,9 +91,22 @@ export class Span {
     if (!config['spanParentId']) delete config['spanParentId']; // Ensure this is completely erased if just empty
 
     // This ensures we get correct logs output
-    process.stdout.write(JSON.stringify(config) + '\n');
+    process.stdout.write(JSON.stringify(this.sortOutput(config)) + '\n');
 
     // The tracer no longer needs to care about this span
     this.tracer.removeSpan(config['spanName']);
+  }
+
+  /**
+   * @description Alphabetically sort the fields in the log object.
+   */
+  private sortOutput(input: Record<string, any>) {
+    const sortedOutput: any = {};
+
+    Object.entries(input)
+      .sort()
+      .forEach(([key, value]) => (sortedOutput[key] = value));
+
+    return sortedOutput;
   }
 }

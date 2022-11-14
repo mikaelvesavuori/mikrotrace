@@ -1,10 +1,11 @@
 import { MikroTrace } from '../entities/MikroTrace';
+import { DynamicMetadata } from './DynamicMetadata';
 
 /**
  * @description The configuration shape of a `Span`. This configuration is
  * what we will manipulate and work on.
  */
-export interface SpanConfiguration {
+export type SpanConfiguration = DynamicMetadata & {
   /**
    * Name of the span. Same as `spanName`.
    * Used as a redundancy as Honeycomb and perhaps
@@ -66,7 +67,7 @@ export interface SpanConfiguration {
    * Is set to `true` automatically when calling with `span.end()`.
    */
   isEnded: boolean;
-}
+};
 
 /**
  * @description Input for creating a new `Span`.
@@ -100,4 +101,8 @@ export type SpanInput = {
    * Parent span's name.
    */
   parentSpanName?: string;
+  /**
+   * AWS metadata
+   */
+  metadata?: Record<string, any>;
 };

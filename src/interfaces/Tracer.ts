@@ -7,6 +7,14 @@ export interface MikroTraceInput {
   serviceName: string;
   correlationId?: string;
   parentContext?: string;
+  /**
+   * @description AWS `event` object.
+   */
+  event?: any;
+  /**
+   * @description AWS `context` object.
+   */
+  context?: any;
 }
 
 /**

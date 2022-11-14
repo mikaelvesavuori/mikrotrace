@@ -1,3 +1,5 @@
+import { getMetadata } from 'aws-metadata-utils';
+
 import { Span } from './Span';
 import { SpanRepresentation, MikroTraceInput, MikroTraceEnrichInput } from '../interfaces/Tracer';
 
@@ -26,12 +28,16 @@ export class MikroTrace {
   private static spans: SpanRepresentation[];
   private static correlationId?: string;
   private static parentContext = '';
+  private static event: any;
+  private static context: any;
 
-  private constructor() {
+  private constructor(event: any, context: any) {
     MikroTrace.spans = [];
     MikroTrace.serviceName = '';
     MikroTrace.correlationId = '';
     MikroTrace.parentContext = '';
+    MikroTrace.event = event;
+    MikroTrace.context = context;
   }
 
   /**
@@ -46,13 +52,21 @@ export class MikroTrace {
    * `enrich()` and pass in your additional data there.
    */
   public static start(input?: MikroTraceInput) {
-    if (!MikroTrace.instance) MikroTrace.instance = new MikroTrace();
-    if (input) {
-      MikroTrace.spans = [];
-      MikroTrace.serviceName = input.serviceName || '';
-      MikroTrace.correlationId = input.correlationId || '';
-      MikroTrace.parentContext = input.parentContext || '';
-    }
+    const serviceName = input?.serviceName || '';
+    const correlationId = input?.correlationId || '';
+    const parentContext = input?.parentContext || '';
+    const event = input?.event || {};
+    const context = input?.context || {};
+
+    if (!MikroTrace.instance) MikroTrace.instance = new MikroTrace(event, context);
+
+    MikroTrace.spans = [];
+    MikroTrace.serviceName = serviceName;
+    MikroTrace.correlationId = correlationId;
+    MikroTrace.parentContext = parentContext;
+    MikroTrace.event = event;
+    MikroTrace.context = context;
+
     return MikroTrace.instance;
   }
 
@@ -195,6 +209,8 @@ export class MikroTrace {
 
     const { parentSpanId, parentTraceId } = this.getParentIds(spanName, parentSpanName);
 
+    const metadata = this.filterMetadata(getMetadata(MikroTrace.event, MikroTrace.context));
+
     const newSpan = new Span({
       tracer: this,
       correlationId: MikroTrace.correlationId,
@@ -202,7 +218,8 @@ export class MikroTrace {
       spanName,
       parentSpanId,
       parentTraceId,
-      parentSpanName
+      parentSpanName,
+      metadata
     });
 
     // Store local representation so we can make lookups for relations.
@@ -226,5 +243,19 @@ export class MikroTrace {
   public endAll(): void {
     MikroTrace.spans.forEach((spanRep: SpanRepresentation) => spanRep.reference.end());
     this.setParentContext('');
+  }
+
+  /**
+   * @description Filter metadata from empties.
+   */
+  private filterMetadata(metadata: Record<string, any>) {
+    const filteredMetadata: any = {};
+
+    Object.entries(metadata).forEach((entry: any) => {
+      const [key, value] = entry;
+      if (value) filteredMetadata[key] = value;
+    });
+
+    return filteredMetadata;
   }
 }
