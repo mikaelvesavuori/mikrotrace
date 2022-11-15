@@ -34,8 +34,8 @@ export class Span {
     const timeNow = Date.now();
 
     return this.filterMetadata({
-      ...staticMetadata,
       ...dynamicMetadata,
+      ...staticMetadata,
       timestamp: new Date(timeNow).toISOString(),
       timestampEpoch: `${timeNow}`,
       startTime: `${timeNow}`,
