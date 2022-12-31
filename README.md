@@ -12,7 +12,7 @@
 
 ---
 
-_JSON tracer that tries to emulate [OpenTelemetry](https://opentelemetry.io) semantics and behavior. Built as a ligher-weight way to handle spans in technical contexts like AWS Lambda to Honeycomb_.
+_JSON tracer that mildly emulates [OpenTelemetry](https://opentelemetry.io) semantics and behavior. Built as a ligher-weight way to handle spans in technical contexts like AWS Lambda to Honeycomb_.
 
 My rationale to build and distribute this is because setting up OpenTelemetry (OTEL) was harder than I would have wanted and expected. Also, while some of the semantics are nice, my feeling was that generally it was not the DX that I was hoping for. I can see a lot of developers fall through on their tracing journey going this route... MikroTrace attempts to simplify and minimize how traces are created. It is specially built for those cases in which you can use JSON logs and have your observability tool translate these into traces in that system.
 
