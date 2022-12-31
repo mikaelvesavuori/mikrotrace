@@ -12,7 +12,7 @@ import {
 } from '../application/errors/errors';
 
 /**
- * @description Custom basic tracer that tries to emulate OpenTelemetry semantics
+ * @description Custom basic tracer that mildly emulates OpenTelemetry semantics
  * and behavior. Built as a ligher-weight way to handle spans in technical
  * contexts (like AWS Lambda) where OTEL tooling seems brittle at best.
  *
