@@ -349,6 +349,36 @@ test.serial('It should be able to set multiple custom attributes', (t) => {
   t.deepEqual(attributes, expected);
 });
 
+test.serial('It should propagate the trace ID to any child spans', (t) => {
+  const tracer = MikroTrace.start();
+
+  const span = tracer.start('First span');
+  const firstId = span.getConfiguration().traceId;
+
+  const span2 = tracer.start('Second span');
+  const secondId = span2.getConfiguration().traceId;
+
+  span2.end();
+  span.end();
+
+  t.is(firstId, secondId);
+});
+
+test.serial('It should get a new trace ID for each call to the start() method', (t) => {
+  const tracer = MikroTrace.start();
+
+  const span = tracer.start('First span');
+  const firstId = span.getConfiguration().traceId;
+  span.end();
+
+  MikroTrace.start();
+  const span2 = tracer.start('Second span');
+  const secondId = span2.getConfiguration().traceId;
+  span2.end();
+
+  t.not(firstId, secondId);
+});
+
 /**
  * NEGATIVE TESTS
  */

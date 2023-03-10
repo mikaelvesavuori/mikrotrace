@@ -44,7 +44,7 @@ export class Span {
       spanParent: parentSpanName,
       spanParentId: parentSpanId || '',
       spanId: randomUUID(),
-      traceId: parentTraceId || randomUUID(),
+      traceId: parentTraceId,
       attributes: {},
       correlationId: correlationId || '',
       service: service,

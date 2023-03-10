@@ -10,6 +10,7 @@ import {
   MissingSpanNameError,
   SpanAlreadyExistsError
 } from '../application/errors/errors';
+import { randomUUID } from 'crypto';
 
 /**
  * @description Custom basic tracer that mildly emulates OpenTelemetry semantics
@@ -31,6 +32,7 @@ export class MikroTrace {
   private static spans: SpanRepresentation[];
   private static correlationId?: string;
   private static parentContext = '';
+  private static traceId: string;
   private static event: any;
   private static context: any;
 
@@ -40,6 +42,7 @@ export class MikroTrace {
     MikroTrace.serviceName = '';
     MikroTrace.correlationId = '';
     MikroTrace.parentContext = '';
+    MikroTrace.traceId = randomUUID();
     MikroTrace.event = event;
     MikroTrace.context = context;
   }
@@ -69,6 +72,7 @@ export class MikroTrace {
     MikroTrace.serviceName = serviceName;
     MikroTrace.correlationId = correlationId;
     MikroTrace.parentContext = parentContext;
+    MikroTrace.traceId = randomUUID();
     MikroTrace.event = event;
     MikroTrace.context = context;
 
@@ -171,7 +175,7 @@ export class MikroTrace {
      */
     return {
       parentSpanId: undefined,
-      parentTraceId: undefined
+      parentTraceId: MikroTrace.traceId
     };
   }
 

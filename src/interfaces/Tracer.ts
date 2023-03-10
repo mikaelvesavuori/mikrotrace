@@ -61,7 +61,7 @@ export type SpanRepresentation = {
    */
   spanName: string;
   /**
-   * @description Trace ID for this specific trace.
+   * @description Trace ID for this specific tracer.
    */
   traceId: string;
   /**

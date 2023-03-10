@@ -32,7 +32,7 @@ export type SpanConfiguration = DynamicMetadata & {
    */
   spanParent?: string;
   /**
-   * Trace ID for this span. Should be same as `parentTraceId`, else set new one.
+   * Trace ID for this tracer. Should be same as `parentTraceId`, else set new one.
    */
   traceId: string;
   /**
