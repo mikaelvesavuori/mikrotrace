@@ -171,6 +171,18 @@ const tracer = MikroTrace.start({ serviceName: 'My service' });
 tracer.setCorrelationId('abc-123');
 ```
 
+#### Force a new trace ID
+
+```typescript
+const tracer = MikroTrace.start({ serviceName: 'My service' }, true);
+```
+
+#### Reset the tracer completely
+
+```typescript
+const tracer = MikroTrace.reset();
+```
+
 #### Set the parent context manually
 
 ```typescript

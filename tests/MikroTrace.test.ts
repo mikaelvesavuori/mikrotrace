@@ -23,6 +23,8 @@ function clearEnv() {
   process.env.AWS_LAMBDA_FUNCTION_VERSION = '';
 }
 
+test.afterEach(() => MikroTrace.reset());
+
 /**
  * POSITIVE TESTS
  */
@@ -364,20 +366,24 @@ test.serial('It should propagate the trace ID to any child spans', (t) => {
   t.is(firstId, secondId);
 });
 
-test.serial('It should get a new trace ID for each call to the start() method', (t) => {
-  const tracer = MikroTrace.start();
+test.serial(
+  'It should get a new trace ID for each call to the "start()" method if using the "forceNewTraceId" option',
+  (t) => {
+    const tracer = MikroTrace.start();
 
-  const span = tracer.start('First span');
-  const firstId = span.getConfiguration().traceId;
-  span.end();
+    const span = tracer.start('First span');
+    const firstId = span.getConfiguration().traceId;
+    span.end();
 
-  MikroTrace.start();
-  const span2 = tracer.start('Second span');
-  const secondId = span2.getConfiguration().traceId;
-  span2.end();
+    // @ts-ignore
+    MikroTrace.start({}, true);
+    const span2 = tracer.start('Second span');
+    const secondId = span2.getConfiguration().traceId;
+    span2.end();
 
-  t.not(firstId, secondId);
-});
+    t.not(firstId, secondId);
+  }
+);
 
 /**
  * NEGATIVE TESTS
@@ -425,17 +431,3 @@ test.serial(
     t.is(error.name, 'SpanAlreadyExistsError');
   }
 );
-
-test.serial('It should clear out metadata and other values between instances', (t) => {
-  const expected = undefined;
-
-  const tracer = MikroTrace.start({ serviceName: 'My service', event, context });
-  const span = tracer.start('My span');
-  MikroTrace.start({ serviceName: 'My service 2' });
-  const span2 = tracer.start('New span');
-  const configuration = span2.getConfiguration();
-  span2.end();
-  span.end();
-
-  t.is(configuration.accountId, expected);
-});

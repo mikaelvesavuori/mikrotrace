@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { getMetadata } from 'aws-metadata-utils';
 
 import { Span } from './Span';
@@ -10,7 +11,6 @@ import {
   MissingSpanNameError,
   SpanAlreadyExistsError
 } from '../application/errors/errors';
-import { randomUUID } from 'crypto';
 
 /**
  * @description Custom basic tracer that mildly emulates OpenTelemetry semantics
@@ -58,12 +58,12 @@ export class MikroTrace {
    * If you want to "add" to these, you should instead call
    * `enrich()` and pass in your additional data there.
    */
-  public static start(input?: MikroTraceInput) {
-    const serviceName = input?.serviceName || '';
-    const correlationId = input?.correlationId || '';
-    const parentContext = input?.parentContext || '';
-    const event = input?.event || {};
-    const context = input?.context || {};
+  public static start(input?: MikroTraceInput, forceNewTraceId = false) {
+    const serviceName = input?.serviceName || MikroTrace.serviceName || '';
+    const correlationId = input?.correlationId || MikroTrace.correlationId || '';
+    const parentContext = input?.parentContext || MikroTrace.parentContext || '';
+    const event = input?.event || MikroTrace.event || {};
+    const context = input?.context || MikroTrace.context || {};
 
     if (!MikroTrace.instance) MikroTrace.instance = new MikroTrace(event, context);
 
@@ -72,7 +72,7 @@ export class MikroTrace {
     MikroTrace.serviceName = serviceName;
     MikroTrace.correlationId = correlationId;
     MikroTrace.parentContext = parentContext;
-    MikroTrace.traceId = randomUUID();
+    MikroTrace.traceId = forceNewTraceId ? randomUUID() : MikroTrace.traceId;
     MikroTrace.event = event;
     MikroTrace.context = context;
 
@@ -86,6 +86,14 @@ export class MikroTrace {
     if (input.serviceName) MikroTrace.serviceName = input.serviceName;
     if (input.correlationId) MikroTrace.setCorrelationId(input.correlationId);
     if (input.parentContext) MikroTrace.parentContext = input.parentContext;
+  }
+
+  /**
+   * @description An emergency mechanism if you absolutely need to
+   * reset the instance to its empty default state.
+   */
+  public static reset() {
+    MikroTrace.instance = new MikroTrace({}, {});
   }
 
   /**
