@@ -47,7 +47,7 @@ export class Span {
       traceId: parentTraceId,
       attributes: {},
       correlationId: correlationId || '',
-      service: service,
+      service,
       isEnded: false
     });
   }

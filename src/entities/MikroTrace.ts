@@ -68,7 +68,6 @@ export class MikroTrace {
     if (!MikroTrace.instance) MikroTrace.instance = new MikroTrace(event, context);
 
     MikroTrace.metadataConfig = input?.metadataConfig || {};
-    MikroTrace.spans = [];
     MikroTrace.serviceName = serviceName;
     MikroTrace.correlationId = correlationId;
     MikroTrace.parentContext = parentContext;
@@ -86,6 +85,57 @@ export class MikroTrace {
     if (input.serviceName) MikroTrace.serviceName = input.serviceName;
     if (input.correlationId) MikroTrace.setCorrelationId(input.correlationId);
     if (input.parentContext) MikroTrace.parentContext = input.parentContext;
+  }
+
+  /**
+   * @description Start a new trace. This will typically be automatically
+   * assigned to the parent trace if one exists. Optionally you can pass in
+   * the name of a parent span to link it to its trace ID.
+   *
+   * @see https://docs.honeycomb.io/getting-data-in/tracing/send-trace-data/
+   * ```
+   * A root span, the first span in a trace, does not have a parent. As you
+   * instrument your code, make sure every span propagates its `trace.trace_id`
+   * and` trace.span_id` to any child spans it calls, so that the child span can
+   * use those values as its `trace.trace_id` and `trace.parent_id`. Honeycomb uses
+   * these relationships to determine the order spans execute and construct the
+   * waterfall diagram.
+   * ```
+   *
+   * @param parentSpanName If provided, this will override any existing parent context
+   * for this particular trace.
+   */
+  public start(spanName: string, parentSpanName?: string): Span {
+    if (!spanName) throw new MissingSpanNameError();
+
+    const spanExists = this.getSpan(spanName);
+    if (spanExists) throw new SpanAlreadyExistsError(spanName);
+
+    const { parentSpanId, parentTraceId } = this.getParentIds(spanName, parentSpanName);
+    const dynamicMetadata = getMetadata(MikroTrace.event, MikroTrace.context);
+
+    const newSpan = new Span({
+      dynamicMetadata,
+      staticMetadata: MikroTrace.metadataConfig,
+      tracer: this,
+      correlationId: MikroTrace.correlationId || dynamicMetadata.correlationId,
+      service: MikroTrace.serviceName || MikroTrace.metadataConfig.service,
+      spanName,
+      parentSpanId,
+      parentTraceId: parentTraceId || MikroTrace.traceId,
+      parentSpanName
+    });
+
+    // Store local representation so we can make lookups for relations.
+    const { spanId, traceId } = newSpan.getConfiguration();
+    MikroTrace.spans.push({
+      spanName,
+      spanId,
+      traceId,
+      reference: newSpan
+    });
+
+    return newSpan;
   }
 
   /**
@@ -137,15 +187,6 @@ export class MikroTrace {
   }
 
   /**
-   * @description Get an individual span by name.
-   */
-  private getSpan(spanName: string): SpanRepresentation | null {
-    const span: SpanRepresentation =
-      MikroTrace.spans.filter((span: SpanRepresentation) => span.spanName === spanName)[0] || null;
-    return span;
-  }
-
-  /**
    * @description Utility to get `parentSpanId` and `parentTraceId` from
    * the correct source. If passed a `parentSpanName` we will always use
    * this over any existing context.
@@ -155,7 +196,7 @@ export class MikroTrace {
     if (!MikroTrace.parentContext) this.setParentContext(spanName);
     const parentContext = MikroTrace.parentContext;
 
-    // Return values for new parent context
+    // Return values for new, explicitly-set parent context
     if (parentSpanName) {
       const span = this.getSpan(parentSpanName);
       if (!span) throw new MissingParentSpanError(parentSpanName);
@@ -183,8 +224,17 @@ export class MikroTrace {
      */
     return {
       parentSpanId: undefined,
-      parentTraceId: MikroTrace.traceId
+      parentTraceId: undefined
     };
+  }
+
+  /**
+   * @description Get an individual span by name.
+   */
+  private getSpan(spanName: string): SpanRepresentation | null {
+    const span: SpanRepresentation =
+      MikroTrace.spans.filter((span: SpanRepresentation) => span.spanName === spanName)[0] || null;
+    return span;
   }
 
   /**
@@ -201,60 +251,9 @@ export class MikroTrace {
   }
 
   /**
-   * @description Start a new trace. This will typically be automatically
-   * assigned to the parent trace if one exists. Optionally you can pass in
-   * the name of a parent span to link it to its trace ID.
-   *
-   * @see https://docs.honeycomb.io/getting-data-in/tracing/send-trace-data/
-   * ```
-   * A root span, the first span in a trace, does not have a parent. As you
-   * instrument your code, make sure every span propagates its `trace.trace_id`
-   * and` trace.span_id` to any child spans it calls, so that the child span can
-   * use those values as its `trace.trace_id` and `trace.parent_id`. Honeycomb uses
-   * these relationships to determine the order spans execute and construct the
-   * waterfall diagram.
-   * ```
-   *
-   * @param parentSpanName If provided, this will override any existing parent context
-   * for this particular trace.
-   */
-  public start(spanName: string, parentSpanName?: string): Span {
-    if (!spanName) throw new MissingSpanNameError();
-
-    const spanExists = this.getSpan(spanName);
-    if (spanExists) throw new SpanAlreadyExistsError(spanName);
-
-    const { parentSpanId, parentTraceId } = this.getParentIds(spanName, parentSpanName);
-    const dynamicMetadata = getMetadata(MikroTrace.event, MikroTrace.context);
-
-    const newSpan = new Span({
-      dynamicMetadata,
-      staticMetadata: MikroTrace.metadataConfig,
-      tracer: this,
-      correlationId: MikroTrace.correlationId || dynamicMetadata.correlationId,
-      service: MikroTrace.serviceName || MikroTrace.metadataConfig.service,
-      spanName,
-      parentSpanId,
-      parentTraceId,
-      parentSpanName
-    });
-
-    // Store local representation so we can make lookups for relations.
-    const { spanId, traceId } = newSpan.getConfiguration();
-    MikroTrace.spans.push({
-      spanName,
-      spanId: spanId,
-      traceId: traceId,
-      reference: newSpan
-    });
-
-    return newSpan;
-  }
-
-  /**
    * @description Closes all spans.
    *
-   * Only use the sparingly and in relevant cases, such as
+   * Only use this sparingly and in relevant cases, such as
    * when you need to close all spans in case of an error.
    */
   public endAll(): void {

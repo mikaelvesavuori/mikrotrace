@@ -385,6 +385,34 @@ test.serial(
   }
 );
 
+test.serial('It should propagate the parent span ID to a nested span', (t) => {
+  const tracer = MikroTrace.start();
+
+  const span = tracer.start('First span');
+  const topSpanId = span.getConfiguration().spanId;
+
+  // @ts-ignore
+  MikroTrace.start({});
+  const span2 = tracer.start('Second span');
+  const parentSpanId = span2.getConfiguration().spanParentId;
+
+  // @ts-ignore
+  MikroTrace.start({});
+  const span3 = tracer.start('Third span');
+  const parentSpanId2 = span3.getConfiguration().spanParentId;
+
+  span3.end();
+  span2.end();
+  span.end();
+
+  console.log(span.getConfiguration());
+  console.log(span2.getConfiguration());
+  console.log(span3.getConfiguration());
+
+  t.is(parentSpanId, topSpanId);
+  t.is(parentSpanId2, topSpanId);
+});
+
 /**
  * NEGATIVE TESTS
  */
