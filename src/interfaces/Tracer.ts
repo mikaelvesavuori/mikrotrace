@@ -69,6 +69,10 @@ export type SpanRepresentation = {
    */
   spanId: string;
   /**
+   * @description The ID of the parent span.
+   */
+  parentSpanId: string;
+  /**
    * @description The span to reference.
    */
   reference: Span;

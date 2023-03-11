@@ -57,8 +57,10 @@ export class MikroTrace {
    *
    * If you want to "add" to these, you should instead call
    * `enrich()` and pass in your additional data there.
+   *
+   * Running this without input will also force a new `traceId`.
    */
-  public static start(input?: MikroTraceInput, forceNewTraceId = false) {
+  public static start(input?: MikroTraceInput) {
     const serviceName = input?.serviceName || MikroTrace.serviceName || '';
     const correlationId = input?.correlationId || MikroTrace.correlationId || '';
     const parentContext = input?.parentContext || MikroTrace.parentContext || '';
@@ -71,10 +73,18 @@ export class MikroTrace {
     MikroTrace.serviceName = serviceName;
     MikroTrace.correlationId = correlationId;
     MikroTrace.parentContext = parentContext;
-    MikroTrace.traceId = forceNewTraceId ? randomUUID() : MikroTrace.traceId;
+    MikroTrace.traceId = randomUUID();
     MikroTrace.event = event;
     MikroTrace.context = context;
 
+    return MikroTrace.instance;
+  }
+
+  /**
+   * @description Returns the current instance of MikroTrace without
+   * resetting anything or otherwise affecting the current state.
+   */
+  public static continue() {
     return MikroTrace.instance;
   }
 
@@ -110,32 +120,19 @@ export class MikroTrace {
 
     const spanExists = this.getSpan(spanName);
     if (spanExists) throw new SpanAlreadyExistsError(spanName);
+    if (parentSpanName) {
+      const parentSpan = this.getSpan(parentSpanName);
+      if (!parentSpan) throw new MissingParentSpanError(parentSpanName);
+    }
 
-    const { parentSpanId, parentTraceId } = this.getParentIds(spanName, parentSpanName);
+    // This instance looks fresh so let's set the parent as the current one for later spans
+    if (!MikroTrace.parentContext) this.setParentContext(spanName);
+
     const dynamicMetadata = getMetadata(MikroTrace.event, MikroTrace.context);
-
-    const newSpan = new Span({
-      dynamicMetadata,
-      staticMetadata: MikroTrace.metadataConfig,
-      tracer: this,
-      correlationId: MikroTrace.correlationId || dynamicMetadata.correlationId,
-      service: MikroTrace.serviceName || MikroTrace.metadataConfig.service,
-      spanName,
-      parentSpanId,
-      parentTraceId: parentTraceId || MikroTrace.traceId,
-      parentSpanName
-    });
-
-    // Store local representation so we can make lookups for relations.
-    const { spanId, traceId } = newSpan.getConfiguration();
-    MikroTrace.spans.push({
-      spanName,
-      spanId,
-      traceId,
-      reference: newSpan
-    });
-
-    return newSpan;
+    const parentSpan = this.getSpan(MikroTrace.parentContext);
+    const span = this.createSpan(spanName, dynamicMetadata, parentSpanName, parentSpan);
+    this.addSpan(span);
+    return span;
   }
 
   /**
@@ -182,50 +179,31 @@ export class MikroTrace {
       serviceName: MikroTrace.serviceName,
       spans: MikroTrace.spans,
       correlationId: MikroTrace.correlationId,
-      parentContext: MikroTrace.parentContext
+      parentContext: MikroTrace.parentContext,
+      traceId: MikroTrace.traceId
     };
   }
 
   /**
-   * @description Utility to get `parentSpanId` and `parentTraceId` from
-   * the correct source. If passed a `parentSpanName` we will always use
-   * this over any existing context.
+   * @description Request to create a valid Span.
    */
-  private getParentIds(spanName: string, parentSpanName?: string) {
-    // This instance looks fresh so let's set the parent as the current one for later spans
-    if (!MikroTrace.parentContext) this.setParentContext(spanName);
-    const parentContext = MikroTrace.parentContext;
-
-    // Return values for new, explicitly-set parent context
-    if (parentSpanName) {
-      const span = this.getSpan(parentSpanName);
-      if (!span) throw new MissingParentSpanError(parentSpanName);
-      return {
-        parentSpanId: span['spanId'],
-        parentTraceId: span['traceId']
-      };
-    }
-
-    // Reuse the existing context for child span
-    if (spanName !== parentContext) {
-      const span = this.getSpan(parentContext);
-      if (span)
-        return {
-          parentSpanId: span['spanId'],
-          parentTraceId: span['traceId']
-        };
-    }
-
-    /**
-     * Span name is same as `parentContext`.
-     * If `parentContext` and `spanName` are the
-     * same we will return undefined to not get a
-     * relational loop.
-     */
-    return {
-      parentSpanId: undefined,
-      parentTraceId: undefined
-    };
+  private createSpan(
+    spanName: string,
+    dynamicMetadata: any,
+    parentSpanName?: string,
+    parentSpan?: any
+  ): Span {
+    return new Span({
+      dynamicMetadata,
+      staticMetadata: MikroTrace.metadataConfig,
+      tracer: this,
+      correlationId: MikroTrace.correlationId || dynamicMetadata.correlationId,
+      service: MikroTrace.serviceName || MikroTrace.metadataConfig.service,
+      spanName,
+      parentSpanId: parentSpan?.spanId || '',
+      parentSpanName: parentSpanName || parentSpan?.spanName || '',
+      parentTraceId: MikroTrace.traceId
+    });
   }
 
   /**
@@ -238,6 +216,21 @@ export class MikroTrace {
   }
 
   /**
+   * @description Store local representation so we can make lookups for relations.
+   */
+  private addSpan(span: Span) {
+    const { spanName, spanId, traceId, spanParentId } = span.getConfiguration();
+
+    MikroTrace.spans.push({
+      spanName,
+      spanId,
+      traceId,
+      parentSpanId: spanParentId,
+      reference: span
+    });
+  }
+
+  /**
    * @description Remove an individual span.
    *
    * Avoid calling this manually as the `Span` class will
@@ -247,6 +240,7 @@ export class MikroTrace {
     const spans: SpanRepresentation[] = MikroTrace.spans.filter(
       (span: SpanRepresentation) => span.spanName !== spanName
     );
+
     MikroTrace.spans = spans;
   }
 
@@ -258,6 +252,8 @@ export class MikroTrace {
    */
   public endAll(): void {
     MikroTrace.spans.forEach((spanRep: SpanRepresentation) => spanRep.reference.end());
+    MikroTrace.spans = [];
     this.setParentContext('');
+    MikroTrace.traceId = randomUUID();
   }
 }

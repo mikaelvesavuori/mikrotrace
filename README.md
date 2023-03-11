@@ -48,6 +48,14 @@ import { MikroTrace } from 'mikrotrace';
 const tracer = MikroTrace.start({ serviceName: 'My service' });
 ```
 
+### Reusing the same instance without affecting or resetting state
+
+```typescript
+import { MikroTrace } from 'mikrotrace';
+
+const tracer = MikroTrace.continue();
+```
+
 ### Adding metadata from AWS
 
 ```typescript
@@ -292,3 +300,7 @@ const outputOuterSpan = {
 };
 */
 ```
+
+## Improvements
+
+- The handling of child spans and actual references ("IDs") isn't very smart right now.

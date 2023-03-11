@@ -33,6 +33,8 @@ export class Span {
     } = input;
     const timeNow = Date.now();
 
+    const id = randomUUID();
+
     return this.filterMetadata({
       ...dynamicMetadata,
       ...staticMetadata,
@@ -43,7 +45,7 @@ export class Span {
       spanName,
       spanParent: parentSpanName,
       spanParentId: parentSpanId || '',
-      spanId: randomUUID(),
+      spanId: id,
       traceId: parentTraceId,
       attributes: {},
       correlationId: correlationId || '',

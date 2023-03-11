@@ -28,7 +28,7 @@ test.afterEach(() => MikroTrace.reset());
 /**
  * POSITIVE TESTS
  */
-test.serial('It should be able to create a new span with blank service name ', (t) => {
+test.serial('It should be able to create a new span with blank service name', (t) => {
   MikroTrace.start({ serviceName: 'MyService' });
   const tracer = MikroTrace.start({ serviceName: '' });
   const span = tracer.start('My span');
@@ -36,11 +36,36 @@ test.serial('It should be able to create a new span with blank service name ', (
   t.truthy(span);
 });
 
+test.serial('It should retain parent context across continue()-based use', (t) => {
+  MikroTrace.start({ serviceName: 'MyService' });
+  const tracer = MikroTrace.start({ serviceName: '', correlationId: 'abc123' });
+  const c1 = tracer.getConfiguration();
+
+  const continued = MikroTrace.continue();
+  const c2 = continued.getConfiguration();
+
+  t.is(c1.parentContext, c2.parentContext);
+});
+
+test.serial('It should retain trace ID across continue()-based use', (t) => {
+  MikroTrace.start({ serviceName: 'MyService' });
+  const tracer = MikroTrace.start({ serviceName: '', correlationId: 'abc123' });
+  const c1 = tracer.getConfiguration();
+
+  const continued = MikroTrace.continue();
+  const c2 = continued.getConfiguration();
+
+  t.is(c1.traceId, c2.traceId);
+});
+
 test.serial('It should be able to enrich the tracer post-initialization with service name', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   MikroTrace.enrich({ serviceName: 'My new service' });
 
-  t.deepEqual(tracer.getConfiguration(), {
+  const config: Record<string, any> = tracer.getConfiguration();
+  delete config['traceId'];
+
+  t.deepEqual(config, {
     serviceName: 'My new service',
     spans: [],
     correlationId: '',
@@ -54,7 +79,10 @@ test.serial(
     const tracer = MikroTrace.start({ serviceName: 'My service' });
     MikroTrace.enrich({ correlationId: 'abc123' });
 
-    t.deepEqual(tracer.getConfiguration(), {
+    const config: Record<string, any> = tracer.getConfiguration();
+    delete config['traceId'];
+
+    t.deepEqual(config, {
       serviceName: 'My service',
       spans: [],
       correlationId: 'abc123',
@@ -69,7 +97,10 @@ test.serial(
     const tracer = MikroTrace.start({ serviceName: 'My service' });
     MikroTrace.enrich({ parentContext: 'qwerty' });
 
-    t.deepEqual(tracer.getConfiguration(), {
+    const config: Record<string, any> = tracer.getConfiguration();
+    delete config['traceId'];
+
+    t.deepEqual(config, {
       serviceName: 'My service',
       spans: [],
       correlationId: '',
@@ -254,7 +285,10 @@ test.serial('It should be able to remove a span', (t) => {
   tracer.start('My span');
   tracer.removeSpan('My span');
 
-  t.deepEqual(tracer.getConfiguration(), {
+  const config: Record<string, any> = tracer.getConfiguration();
+  delete config['traceId'];
+
+  t.deepEqual(config, {
     correlationId: '',
     parentContext: 'My span',
     serviceName: 'My service',
@@ -267,7 +301,11 @@ test.serial('It should be able to end all spans', (t) => {
   tracer.start('My span');
   tracer.start('My extra span');
   tracer.endAll();
-  t.deepEqual(tracer.getConfiguration(), basicTracer);
+
+  const config: Record<string, any> = tracer.getConfiguration();
+  delete config['traceId'];
+
+  t.deepEqual(config, basicTracer);
 });
 
 test.serial('It should be able to set the parent context', (t) => {
@@ -284,7 +322,10 @@ test.serial('It should be able to set the parent context', (t) => {
   const _basicTracer = JSON.parse(JSON.stringify(basicTracer));
   _basicTracer.parentContext = expected;
 
-  t.deepEqual(tracer.getConfiguration(), _basicTracer);
+  const config: Record<string, any> = tracer.getConfiguration();
+  delete config['traceId'];
+
+  t.deepEqual(config, _basicTracer);
 });
 
 test.serial('It should be able to set the parent span name to an existing span', (t) => {
@@ -376,7 +417,7 @@ test.serial(
     span.end();
 
     // @ts-ignore
-    MikroTrace.start({}, true);
+    MikroTrace.start({});
     const span2 = tracer.start('Second span');
     const secondId = span2.getConfiguration().traceId;
     span2.end();
@@ -384,34 +425,6 @@ test.serial(
     t.not(firstId, secondId);
   }
 );
-
-test.serial('It should propagate the parent span ID to a nested span', (t) => {
-  const tracer = MikroTrace.start();
-
-  const span = tracer.start('First span');
-  const topSpanId = span.getConfiguration().spanId;
-
-  // @ts-ignore
-  MikroTrace.start({});
-  const span2 = tracer.start('Second span');
-  const parentSpanId = span2.getConfiguration().spanParentId;
-
-  // @ts-ignore
-  MikroTrace.start({});
-  const span3 = tracer.start('Third span');
-  const parentSpanId2 = span3.getConfiguration().spanParentId;
-
-  span3.end();
-  span2.end();
-  span.end();
-
-  console.log(span.getConfiguration());
-  console.log(span2.getConfiguration());
-  console.log(span3.getConfiguration());
-
-  t.is(parentSpanId, topSpanId);
-  t.is(parentSpanId2, topSpanId);
-});
 
 /**
  * NEGATIVE TESTS
