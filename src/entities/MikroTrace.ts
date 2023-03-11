@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { getMetadata } from 'aws-metadata-utils';
 
 import { Span } from './Span';
@@ -6,11 +5,14 @@ import { Span } from './Span';
 import { SpanRepresentation, MikroTraceInput, MikroTraceEnrichInput } from '../interfaces/Tracer';
 import { StaticMetadataConfigInput } from '../interfaces/Metadata';
 
+import { getRandomBytes } from '../frameworks/getRandomBytes';
+
 import {
   MissingParentSpanError,
   MissingSpanNameError,
   SpanAlreadyExistsError
 } from '../application/errors/errors';
+import { SpanConfiguration } from '../interfaces/Span';
 
 /**
  * @description Custom basic tracer that mildly emulates OpenTelemetry semantics
@@ -42,7 +44,7 @@ export class MikroTrace {
     MikroTrace.serviceName = '';
     MikroTrace.correlationId = '';
     MikroTrace.parentContext = '';
-    MikroTrace.traceId = randomUUID();
+    MikroTrace.traceId = getRandomBytes(32);
     MikroTrace.event = event;
     MikroTrace.context = context;
   }
@@ -73,7 +75,7 @@ export class MikroTrace {
     MikroTrace.serviceName = serviceName;
     MikroTrace.correlationId = correlationId;
     MikroTrace.parentContext = parentContext;
-    MikroTrace.traceId = randomUUID();
+    MikroTrace.traceId = getRandomBytes(32);
     MikroTrace.event = event;
     MikroTrace.context = context;
 
@@ -125,13 +127,13 @@ export class MikroTrace {
       if (!parentSpan) throw new MissingParentSpanError(parentSpanName);
     }
 
-    // This instance looks fresh so let's set the parent as the current one for later spans
-    if (!MikroTrace.parentContext) this.setParentContext(spanName);
-
     const dynamicMetadata = getMetadata(MikroTrace.event, MikroTrace.context);
     const parentSpan = this.getSpan(MikroTrace.parentContext);
     const span = this.createSpan(spanName, dynamicMetadata, parentSpanName, parentSpan);
     this.addSpan(span);
+
+    this.setParentContext(spanName);
+
     return span;
   }
 
@@ -185,6 +187,27 @@ export class MikroTrace {
   }
 
   /**
+   * @description Returns a string that can be used as the
+   * content of a W3C `traceparent` HTTP header.
+   * @see https://www.w3.org/TR/trace-context/#traceparent-header
+   */
+  public getTraceHeader(spanConfig: SpanConfiguration, isSampled = false) {
+    // Use the W3C-recommended first version
+    const version = '00';
+    // Use MikroTrace's trace ID
+    const traceId = MikroTrace.traceId;
+    // Use the parent span's ID if available, else use the ID of the current span
+    const parentId = (() => {
+      const parentSpan = this.getSpan(MikroTrace.parentContext);
+      return parentSpan && parentSpan.parentSpanId ? parentSpan.parentSpanId : spanConfig.spanId;
+    })();
+    // As per W3C recommendations
+    const traceFlags = isSampled ? '01' : '00';
+
+    return `${version}-${traceId}-${parentId}-${traceFlags}`;
+  }
+
+  /**
    * @description Request to create a valid Span.
    */
   private createSpan(
@@ -216,6 +239,15 @@ export class MikroTrace {
   }
 
   /**
+   * @description Get an individual span by ID.
+   */
+  private getSpanById(spanId: string): SpanRepresentation | null {
+    const span: SpanRepresentation =
+      MikroTrace.spans.filter((span: SpanRepresentation) => span.spanId === spanId)[0] || null;
+    return span;
+  }
+
+  /**
    * @description Store local representation so we can make lookups for relations.
    */
   private addSpan(span: Span) {
@@ -237,11 +269,16 @@ export class MikroTrace {
    * make the necessary call when having ended a span.
    */
   public removeSpan(spanName: string): void {
-    const spans: SpanRepresentation[] = MikroTrace.spans.filter(
-      (span: SpanRepresentation) => span.spanName !== spanName
-    );
+    const parentSpanId = MikroTrace.spans.filter(
+      (span: SpanRepresentation) => span.spanName === spanName
+    )[0]?.parentSpanId;
+
+    const parentSpan = this.getSpanById(parentSpanId)?.spanName || '';
+
+    const spans = MikroTrace.spans.filter((span: SpanRepresentation) => span.spanName !== spanName);
 
     MikroTrace.spans = spans;
+    this.setParentContext(parentSpan);
   }
 
   /**
@@ -253,7 +290,7 @@ export class MikroTrace {
   public endAll(): void {
     MikroTrace.spans.forEach((spanRep: SpanRepresentation) => spanRep.reference.end());
     MikroTrace.spans = [];
+    MikroTrace.traceId = getRandomBytes(32);
     this.setParentContext('');
-    MikroTrace.traceId = randomUUID();
   }
 }

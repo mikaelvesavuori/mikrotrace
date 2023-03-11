@@ -1,7 +1,8 @@
-import { randomUUID } from 'crypto';
-
 import { MikroTrace } from './MikroTrace';
+
 import { SpanConfiguration, SpanInput } from '../interfaces/Span';
+
+import { getRandomBytes } from '../frameworks/getRandomBytes';
 
 /**
  * @description Produces valid invariants of the actual `Span`.
@@ -33,7 +34,7 @@ export class Span {
     } = input;
     const timeNow = Date.now();
 
-    const id = randomUUID();
+    const id = getRandomBytes(16);
 
     return this.filterMetadata({
       ...dynamicMetadata,

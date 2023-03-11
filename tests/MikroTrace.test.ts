@@ -28,7 +28,7 @@ test.afterEach(() => MikroTrace.reset());
 /**
  * POSITIVE TESTS
  */
-test.serial('It should be able to create a new span with blank service name', (t) => {
+test.serial('It should create a new span with blank service name', (t) => {
   MikroTrace.start({ serviceName: 'MyService' });
   const tracer = MikroTrace.start({ serviceName: '' });
   const span = tracer.start('My span');
@@ -58,7 +58,7 @@ test.serial('It should retain trace ID across continue()-based use', (t) => {
   t.is(c1.traceId, c2.traceId);
 });
 
-test.serial('It should be able to enrich the tracer post-initialization with service name', (t) => {
+test.serial('It should enrich the tracer post-initialization with service name', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   MikroTrace.enrich({ serviceName: 'My new service' });
 
@@ -73,43 +73,37 @@ test.serial('It should be able to enrich the tracer post-initialization with ser
   });
 });
 
-test.serial(
-  'It should be able to enrich the tracer post-initialization with correlation ID',
-  (t) => {
-    const tracer = MikroTrace.start({ serviceName: 'My service' });
-    MikroTrace.enrich({ correlationId: 'abc123' });
+test.serial('It should enrich the tracer post-initialization with correlation ID', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
+  MikroTrace.enrich({ correlationId: 'abc123' });
 
-    const config: Record<string, any> = tracer.getConfiguration();
-    delete config['traceId'];
+  const config: Record<string, any> = tracer.getConfiguration();
+  delete config['traceId'];
 
-    t.deepEqual(config, {
-      serviceName: 'My service',
-      spans: [],
-      correlationId: 'abc123',
-      parentContext: ''
-    });
-  }
-);
+  t.deepEqual(config, {
+    serviceName: 'My service',
+    spans: [],
+    correlationId: 'abc123',
+    parentContext: ''
+  });
+});
 
-test.serial(
-  'It should be able to enrich the tracer post-initialization with parent context',
-  (t) => {
-    const tracer = MikroTrace.start({ serviceName: 'My service' });
-    MikroTrace.enrich({ parentContext: 'qwerty' });
+test.serial('It should enrich the tracer post-initialization with parent context', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
+  MikroTrace.enrich({ parentContext: 'qwerty' });
 
-    const config: Record<string, any> = tracer.getConfiguration();
-    delete config['traceId'];
+  const config: Record<string, any> = tracer.getConfiguration();
+  delete config['traceId'];
 
-    t.deepEqual(config, {
-      serviceName: 'My service',
-      spans: [],
-      correlationId: '',
-      parentContext: 'qwerty'
-    });
-  }
-);
+  t.deepEqual(config, {
+    serviceName: 'My service',
+    spans: [],
+    correlationId: '',
+    parentContext: 'qwerty'
+  });
+});
 
-test.serial('It should be able to create a new span', (t) => {
+test.serial('It should create a new span', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
 
@@ -118,34 +112,6 @@ test.serial('It should be able to create a new span', (t) => {
 
 test.serial('It should set custom static metadata', (t) => {
   setEnv();
-  const metadataConfig = {
-    version: 1,
-    hostPlatform: 'aws',
-    owner: 'MyCompany',
-    domain: 'MyDomain',
-    system: 'MySystem',
-    team: 'MyTeam',
-    tags: ['backend', 'typescript', 'api', 'serverless', 'my-service'],
-    dataSensitivity: 'proprietary'
-  };
-
-  const tracer = MikroTrace.start({ serviceName: 'My service', event, context, metadataConfig });
-  const span = tracer.start('My span');
-  const configuration: any = span.getConfiguration();
-
-  // Check presence of dynamic fields
-  t.true(configuration['startTime'] !== null);
-  t.true(configuration['timestamp'] !== null);
-  t.true(configuration['timestampEpoch'] !== null);
-  t.true(configuration['spanId'] !== null);
-  t.true(configuration['traceId'] !== null);
-
-  // Drop dynamic fields for test validation
-  delete configuration['startTime'];
-  delete configuration['timestamp'];
-  delete configuration['timestampEpoch'];
-  delete configuration['spanId'];
-  delete configuration['traceId'];
 
   const expected = {
     accountId: '123412341234',
@@ -175,14 +141,18 @@ test.serial('It should set custom static metadata', (t) => {
     viewerCountry: 'SE'
   };
 
-  t.deepEqual(configuration, expected);
+  const metadataConfig = {
+    version: 1,
+    hostPlatform: 'aws',
+    owner: 'MyCompany',
+    domain: 'MyDomain',
+    system: 'MySystem',
+    team: 'MyTeam',
+    tags: ['backend', 'typescript', 'api', 'serverless', 'my-service'],
+    dataSensitivity: 'proprietary'
+  };
 
-  clearEnv();
-});
-
-test.serial('It should be able to get the configuration of a new span with AWS metadata', (t) => {
-  setEnv();
-  const tracer = MikroTrace.start({ serviceName: 'My service', event, context });
+  const tracer = MikroTrace.start({ serviceName: 'My service', event, context, metadataConfig });
   const span = tracer.start('My span');
   const configuration: any = span.getConfiguration();
 
@@ -199,6 +169,14 @@ test.serial('It should be able to get the configuration of a new span with AWS m
   delete configuration['timestampEpoch'];
   delete configuration['spanId'];
   delete configuration['traceId'];
+
+  t.deepEqual(configuration, expected);
+
+  clearEnv();
+});
+
+test.serial('It should get the configuration of a new span with AWS metadata', (t) => {
+  setEnv();
 
   const expected = {
     accountId: '123412341234',
@@ -220,47 +198,62 @@ test.serial('It should be able to get the configuration of a new span with AWS m
     viewerCountry: 'SE'
   };
 
+  const tracer = MikroTrace.start({ serviceName: 'My service', event, context });
+  const span = tracer.start('My span');
+  const configuration: any = span.getConfiguration();
+
+  // Check presence of dynamic fields
+  t.true(configuration['startTime'] !== null);
+  t.true(configuration['timestamp'] !== null);
+  t.true(configuration['timestampEpoch'] !== null);
+  t.true(configuration['spanId'] !== null);
+  t.true(configuration['traceId'] !== null);
+
+  // Drop dynamic fields for test validation
+  delete configuration['startTime'];
+  delete configuration['timestamp'];
+  delete configuration['timestampEpoch'];
+  delete configuration['spanId'];
+  delete configuration['traceId'];
+
   t.deepEqual(configuration, expected);
 
   clearEnv();
 });
 
-test.serial(
-  'It should be able to get the configuration of a new span without any AWS metadata',
-  (t) => {
-    const tracer = MikroTrace.start({ serviceName: 'My service' });
-    const span = tracer.start('My span');
-    const configuration: any = span.getConfiguration();
+test.serial('It should get the configuration of a new span without any AWS metadata', (t) => {
+  const expected = {
+    attributes: {},
+    durationMs: 0,
+    isEnded: false,
+    service: 'My service',
+    spanName: 'My span'
+  };
 
-    // Check presence of dynamic fields
-    t.true(configuration['startTime'] !== null);
-    t.true(configuration['timestamp'] !== null);
-    t.true(configuration['timestampEpoch'] !== null);
-    t.true(configuration['spanId'] !== null);
-    t.true(configuration['traceId'] !== null);
-
-    // Drop dynamic fields for test validation
-    delete configuration['startTime'];
-    delete configuration['timestamp'];
-    delete configuration['timestampEpoch'];
-    delete configuration['spanId'];
-    delete configuration['traceId'];
-
-    const expected = {
-      attributes: {},
-      durationMs: 0,
-      isEnded: false,
-      service: 'My service',
-      spanName: 'My span'
-    };
-
-    t.deepEqual(configuration, expected);
-  }
-);
-
-test.serial('It should be able to create a nested span', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
+  const configuration: any = span.getConfiguration();
+
+  // Check presence of dynamic fields
+  t.true(configuration['startTime'] !== null);
+  t.true(configuration['timestamp'] !== null);
+  t.true(configuration['timestampEpoch'] !== null);
+  t.true(configuration['spanId'] !== null);
+  t.true(configuration['traceId'] !== null);
+
+  // Drop dynamic fields for test validation
+  delete configuration['startTime'];
+  delete configuration['timestamp'];
+  delete configuration['timestampEpoch'];
+  delete configuration['spanId'];
+  delete configuration['traceId'];
+
+  t.deepEqual(configuration, expected);
+});
+
+test.serial('It should create a nested span', (t) => {
+  const tracer = MikroTrace.start({ serviceName: 'My service' });
+  const span = tracer.start('My outer span');
   const innerSpan = tracer.start('My inner span');
 
   const id = span.getConfiguration().spanId;
@@ -272,7 +265,7 @@ test.serial('It should be able to create a nested span', (t) => {
   t.is(parentId, id);
 });
 
-test.serial('It should be able to end a span', (t) => {
+test.serial('It should end a span', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   const span = tracer.start('My span');
   span.end();
@@ -280,7 +273,14 @@ test.serial('It should be able to end a span', (t) => {
   t.deepEqual(isEnded, true);
 });
 
-test.serial('It should be able to remove a span', (t) => {
+test.serial('It should remove a span', (t) => {
+  const expected = {
+    correlationId: '',
+    parentContext: '',
+    serviceName: 'My service',
+    spans: []
+  };
+
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   tracer.start('My span');
   tracer.removeSpan('My span');
@@ -288,15 +288,10 @@ test.serial('It should be able to remove a span', (t) => {
   const config: Record<string, any> = tracer.getConfiguration();
   delete config['traceId'];
 
-  t.deepEqual(config, {
-    correlationId: '',
-    parentContext: 'My span',
-    serviceName: 'My service',
-    spans: []
-  });
+  t.deepEqual(config, expected);
 });
 
-test.serial('It should be able to end all spans', (t) => {
+test.serial('It should end all spans', (t) => {
   const tracer = MikroTrace.start({ serviceName: 'My service' });
   tracer.start('My span');
   tracer.start('My extra span');
@@ -308,28 +303,26 @@ test.serial('It should be able to end all spans', (t) => {
   t.deepEqual(config, basicTracer);
 });
 
-test.serial('It should be able to set the parent context', (t) => {
-  const expected = 'My inner span';
+test.serial('It should set the parent context', (t) => {
+  const expected = 'My custom-set context';
+
   const tracer = MikroTrace.start({ serviceName: 'My service' });
 
   const span = tracer.start('My span');
   const innerSpan = tracer.start('My inner span');
   tracer.setParentContext(expected);
-
+  const context = tracer.getConfiguration().parentContext;
   span.end();
   innerSpan.end();
+  const endingContext = tracer.getConfiguration().parentContext;
 
-  const _basicTracer = JSON.parse(JSON.stringify(basicTracer));
-  _basicTracer.parentContext = expected;
-
-  const config: Record<string, any> = tracer.getConfiguration();
-  delete config['traceId'];
-
-  t.deepEqual(config, _basicTracer);
+  t.is(context, expected);
+  t.is(endingContext, '');
 });
 
-test.serial('It should be able to set the parent span name to an existing span', (t) => {
+test.serial('It should set the parent span name to an existing span', (t) => {
   const expected = 'My span';
+
   const tracer = MikroTrace.start({ serviceName: 'My service' });
 
   const span = tracer.start(expected);
@@ -341,7 +334,7 @@ test.serial('It should be able to set the parent span name to an existing span',
   t.deepEqual(innerSpan.getConfiguration().spanParent, expected);
 });
 
-test.serial('It should be able to set the correlation ID post-initialization', (t) => {
+test.serial('It should set the correlation ID post-initialization', (t) => {
   const expected = '1234-asdf-qwerty-foo-BAR';
 
   const tracer = MikroTrace.start({ serviceName: 'My service' });
@@ -353,7 +346,7 @@ test.serial('It should be able to set the correlation ID post-initialization', (
   t.is(correlationId, expected);
 });
 
-test.serial('It should be able to set the correlation ID at the time of initialization', (t) => {
+test.serial('It should set the correlation ID at the time of initialization', (t) => {
   const expected = '1234-asdf-qwerty-foo-BAR';
 
   const tracer = MikroTrace.start({ correlationId: expected, serviceName: 'My service' });
@@ -364,7 +357,7 @@ test.serial('It should be able to set the correlation ID at the time of initiali
   t.is(correlationId, expected);
 });
 
-test.serial('It should be able to set a single custom attribute', (t) => {
+test.serial('It should set a single custom attribute', (t) => {
   const expected = 'some value';
 
   const tracer = MikroTrace.start({ serviceName: 'My service' });
@@ -377,7 +370,7 @@ test.serial('It should be able to set a single custom attribute', (t) => {
   t.is(attributes['key'], expected);
 });
 
-test.serial('It should be able to set multiple custom attributes', (t) => {
+test.serial('It should set multiple custom attributes', (t) => {
   const expected = {
     something: 123,
     someKey: 'someValue'
@@ -425,6 +418,38 @@ test.serial(
     t.not(firstId, secondId);
   }
 );
+
+test.serial('It should produce valid content for a non-sampled W3C "traceheader" header', (t) => {
+  const tracer = MikroTrace.start();
+  const span = tracer.start('First span');
+
+  const header = tracer.getTraceHeader(span.getConfiguration());
+  const [version, traceId, parentId, traceFlags] = header.split('-');
+
+  span.end();
+
+  t.is(version, '00');
+  t.is(traceId.length, 32);
+  t.is(parentId.length, 16);
+  t.is(traceFlags, '00');
+});
+
+test.serial('It should produce valid content for a sampled W3C "traceheader" header', (t) => {
+  const tracer = MikroTrace.start();
+  const span = tracer.start('First span');
+  const innerSpan = tracer.start('Second span');
+
+  const header = tracer.getTraceHeader(span.getConfiguration(), true);
+  const [version, traceId, parentId, traceFlags] = header.split('-');
+
+  innerSpan.end();
+  span.end();
+
+  t.is(version, '00');
+  t.is(traceId.length, 32);
+  t.is(parentId.length, 16);
+  t.is(traceFlags, '01');
+});
 
 /**
  * NEGATIVE TESTS
