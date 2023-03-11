@@ -179,12 +179,6 @@ const tracer = MikroTrace.start({ serviceName: 'My service' });
 tracer.setCorrelationId('abc-123');
 ```
 
-#### Force a new trace ID
-
-```typescript
-const tracer = MikroTrace.start({ serviceName: 'My service' }, true);
-```
-
 #### Reset the tracer completely
 
 ```typescript
@@ -299,6 +293,24 @@ const outputOuterSpan = {
   traceId: 'db62951b-d9a5-4fb6-adf0-10c360e6535f'
 };
 */
+```
+
+#### Get non-sampled W3C `traceheader`
+
+```typescript
+const tracer = MikroTrace.start({ serviceName: 'My service' });
+const span = tracer.start('My span');
+const header = tracer.getTraceHeader(span.getConfiguration());
+span.end();
+```
+
+#### Get sampled W3C `traceheader`
+
+```typescript
+const tracer = MikroTrace.start({ serviceName: 'My service' });
+const span = tracer.start('My span');
+const header = tracer.getTraceHeader(span.getConfiguration(), true);
+span.end();
 ```
 
 ## Improvements
