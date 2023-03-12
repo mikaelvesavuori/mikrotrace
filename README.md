@@ -23,7 +23,7 @@ So what do you get with MikroTrace?
 - Works perfectly with AWS and Honeycomb
 - It removes the need to pass in complete instances into the span functions, instead use plain strings to refer to spans
 - Uses `process.stdout.write()` rather than `console.log()` so you can safely use it in Lambda
-- Tiny (~2.3 KB gzipped)
+- Tiny (~2.6 KB gzipped)
 - Has only one dependency, [`aws-metadata-utils`](https://github.com/mikaelvesavuori/aws-metadata-utils) (for picking out metadata)
 - Has 100% test coverage
 
