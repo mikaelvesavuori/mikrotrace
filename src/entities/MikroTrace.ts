@@ -17,12 +17,12 @@ import { SpanConfiguration } from '../interfaces/Span';
 /**
  * @description Custom basic tracer that mildly emulates OpenTelemetry semantics
  * and behavior. Built as a ligher-weight way to handle spans in technical
- * contexts (like AWS Lambda) where OTEL tooling seems brittle at best.
+ * contexts (like AWS Lambda) where OTel tooling seems brittle at best.
  *
  * Make sure to reuse the same instance across your application to get it
  * working as intended.
  *
- * MikroTrace simplifies the OTEL model a bit:
+ * MikroTrace simplifies the OTel model a bit:
  * - Only supports a single tracing context
  * - Removes the need to pass in complete instances into the
  * span functions. Use strings to refer to spans.
@@ -37,6 +37,8 @@ export class MikroTrace {
   private static traceId: string;
   private static event: any;
   private static context: any;
+  private static samplingLevel: number;
+  private static isTraceSampled: boolean;
 
   private constructor(event: any, context: any) {
     MikroTrace.metadataConfig = {};
@@ -47,6 +49,8 @@ export class MikroTrace {
     MikroTrace.traceId = getRandomBytes(32);
     MikroTrace.event = event;
     MikroTrace.context = context;
+    MikroTrace.samplingLevel = this.initSampleLevel();
+    MikroTrace.isTraceSampled = true;
   }
 
   /**
@@ -130,7 +134,8 @@ export class MikroTrace {
     const dynamicMetadata = getMetadata(MikroTrace.event, MikroTrace.context);
     const parentSpan = this.getSpan(MikroTrace.parentContext);
     const span = this.createSpan(spanName, dynamicMetadata, parentSpanName, parentSpan);
-    this.addSpan(span);
+
+    if (this.shouldSampleTrace()) this.addSpan(span);
 
     this.setParentContext(spanName);
 
@@ -143,6 +148,54 @@ export class MikroTrace {
    */
   public static reset() {
     MikroTrace.instance = new MikroTrace({}, {});
+  }
+
+  /**
+   * @description Initialize the sample rate level.
+   * Only accepts numbers or strings that can convert to numbers.
+   * The default is to use all traces (i.e. `100` percent).
+   */
+  private initSampleLevel(): number {
+    const envValue = process.env.MIKROTRACE_SAMPLE_RATE;
+    if (envValue) {
+      const isNumeric = !Number.isNaN(envValue) && !Number.isNaN(parseFloat(envValue));
+      if (isNumeric) return parseFloat(envValue);
+    }
+    return 100;
+  }
+
+  /**
+   * @description Check if MicroTrace has sampled the last trace.
+   * Will only return true value _after_ having output an actual trace.
+   */
+  public isTraceSampled() {
+    return MikroTrace.isTraceSampled;
+  }
+
+  /**
+   * @description Set sampling rate of traces as a number between 0 and 100.
+   */
+  public setSamplingRate(samplingPercent: number): number {
+    if (typeof samplingPercent !== 'number') return MikroTrace.samplingLevel;
+
+    if (samplingPercent < 0) samplingPercent = 0;
+    if (samplingPercent > 100) samplingPercent = 100;
+
+    MikroTrace.samplingLevel = samplingPercent;
+    return samplingPercent;
+  }
+
+  /**
+   * @description Utility to check if a log should be sampled (written) based
+   * on the currently set `samplingLevel`. This uses a 0-100 scale.
+   *
+   * If the random number is lower than (or equal to) the sampling level,
+   * then we may sample the log.
+   */
+  private shouldSampleTrace(): boolean {
+    const logWillBeSampled = Math.random() * 100 <= MikroTrace.samplingLevel;
+    MikroTrace.isTraceSampled = logWillBeSampled;
+    return logWillBeSampled;
   }
 
   /**
@@ -191,7 +244,7 @@ export class MikroTrace {
    * content of a W3C `traceparent` HTTP header.
    * @see https://www.w3.org/TR/trace-context/#traceparent-header
    */
-  public getTraceHeader(spanConfig: SpanConfiguration, isSampled = false) {
+  public getTraceHeader(spanConfig: SpanConfiguration) {
     // Use the W3C-recommended first version
     const version = '00';
     // Use MikroTrace's trace ID
@@ -202,7 +255,7 @@ export class MikroTrace {
       return parentSpan && parentSpan.parentSpanId ? parentSpan.parentSpanId : spanConfig.spanId;
     })();
     // As per W3C recommendations
-    const traceFlags = isSampled ? '01' : '00';
+    const traceFlags = this.isTraceSampled() ? '01' : '00';
 
     return `${version}-${traceId}-${parentId}-${traceFlags}`;
   }
@@ -230,6 +283,21 @@ export class MikroTrace {
   }
 
   /**
+   * @description Store local representation so we can make lookups for relations.
+   */
+  private addSpan(span: Span) {
+    const { spanName, spanId, traceId, spanParentId } = span.getConfiguration();
+
+    MikroTrace.spans.push({
+      spanName,
+      spanId,
+      traceId,
+      parentSpanId: spanParentId,
+      reference: span
+    });
+  }
+
+  /**
    * @description Get an individual span by name.
    */
   private getSpan(spanName: string): SpanRepresentation | null {
@@ -245,21 +313,6 @@ export class MikroTrace {
     const span: SpanRepresentation =
       MikroTrace.spans.filter((span: SpanRepresentation) => span.spanId === spanId)[0] || null;
     return span;
-  }
-
-  /**
-   * @description Store local representation so we can make lookups for relations.
-   */
-  private addSpan(span: Span) {
-    const { spanName, spanId, traceId, spanParentId } = span.getConfiguration();
-
-    MikroTrace.spans.push({
-      spanName,
-      spanId,
-      traceId,
-      parentSpanId: spanParentId,
-      reference: span
-    });
   }
 
   /**

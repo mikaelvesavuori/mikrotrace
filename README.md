@@ -14,12 +14,12 @@
 
 _JSON tracer that mildly emulates [OpenTelemetry](https://opentelemetry.io) semantics and behavior. Built as a ligher-weight way to handle spans in technical contexts like AWS Lambda to Honeycomb_.
 
-My rationale to build and distribute this is because setting up OpenTelemetry (OTEL) was harder than I would have wanted and expected. Also, while some of the semantics are nice, my feeling was that generally it was not the DX that I was hoping for. I can see a lot of developers fall through on their tracing journey going this route... MikroTrace attempts to simplify and minimize how traces are created. It is specially built for those cases in which you can use JSON logs and have your observability tool translate these into traces in that system.
+My rationale to build and distribute this is because setting up OpenTelemetry (OTel) was harder than I would have wanted and expected. Also, while some of the semantics are nice, my feeling was that generally it was not the DX that I was hoping for. I can see a lot of developers fall through on their tracing journey going this route... MikroTrace attempts to simplify and minimize how traces are created. It is specially built for those cases in which you can use JSON logs and have your observability tool translate these into traces in that system.
 
 So what do you get with MikroTrace?
 
 - Tracing that just works!
-- Familiar OTEL-type semantics
+- Familiar OTel-type semantics
 - Works perfectly with AWS and Honeycomb
 - It removes the need to pass in complete instances into the span functions, instead use plain strings to refer to spans
 - Uses `process.stdout.write()` rather than `console.log()` so you can safely use it in Lambda
@@ -212,6 +212,60 @@ const tracer = MikroTrace.start({ serviceName: 'My service' });
 const tracerConfig = tracer.getConfiguration();
 ```
 
+#### Get W3C `traceheader`
+
+```typescript
+const tracer = MikroTrace.start({ serviceName: 'My service' });
+const span = tracer.start('My span');
+const header = tracer.getTraceHeader(span.getConfiguration());
+span.end();
+```
+
+### Setting the sampling rate
+
+You can set the sampling rate either manually or using an environment variable.
+
+A "sampled" trace means it is a span that gets stored in memory and written. An "unsampled" trace is therefore one that is not written.
+
+The sample rate uses the `0-100` scale. The default value is `100`, meaning you get _all_ traces if you don't set this to something else.
+
+You may use integers or floating point numbers.
+
+#### Setting it with an environment variable
+
+Set `MIKROTRACE_SAMPLE_RATE` to a numeric or numerically-convertible value and it will be set when initializing MikroTrace.
+
+#### Setting it manually
+
+You can also call MikroTrace manually like so:
+
+```typescript
+const logger = MikroTrace.start();
+logger.setSamplingRate(0.5); // 0.5% of all traces will now be sampled.
+logger.setSamplingRate(25); // 25% of all traces will now be sampled.
+```
+
+#### Checking if last trace was sampled
+
+You can check if the last trace was sampled.
+
+The true value of this will only exist _after_ having used the `start()` method, as it gets recalculated every time that the method is run.
+
+```typescript
+tracer.isTraceSampled();
+```
+
+If you want to "persist" the decision you can handle this manually after the first `DEBUG` log call:
+
+```typescript
+// If we get 'TRUE' here we can crank the sampling rate all the way up, else turn it off completely
+tracer.isTraceSampled(); ? tracer.setSamplingRate(100) : tracer.setSamplingRate(0);
+```
+
+#### Passing the sampling decision to other services
+
+This is useful if you want to do more complex, cross-boundary debug logging on a call chain. In MikroTrace, the easiest way to pass this decision is simply by using the `getTraceHeader()` method—as it will produce the content of a W3C `traceheader` that will store the sampling decision in the last part of the string—and sending this in your call to the next service.
+
 ## Demo
 
 ```typescript
@@ -295,24 +349,6 @@ const outputOuterSpan = {
 */
 ```
 
-#### Get non-sampled W3C `traceheader`
-
-```typescript
-const tracer = MikroTrace.start({ serviceName: 'My service' });
-const span = tracer.start('My span');
-const header = tracer.getTraceHeader(span.getConfiguration());
-span.end();
-```
-
-#### Get sampled W3C `traceheader`
-
-```typescript
-const tracer = MikroTrace.start({ serviceName: 'My service' });
-const span = tracer.start('My span');
-const header = tracer.getTraceHeader(span.getConfiguration(), true);
-span.end();
-```
-
 ## Improvements
 
-- The handling of child spans and actual references ("IDs") isn't very smart right now.
+- The handling of child spans and actual references ("IDs") isn't very smart right now. Expect that cases where you use a single parent span will work just fine, but that nested parents probably work perfectly just yet.

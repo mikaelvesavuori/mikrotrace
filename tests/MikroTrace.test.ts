@@ -421,12 +421,15 @@ test.serial(
 
 test.serial('It should produce valid content for a non-sampled W3C "traceheader" header', (t) => {
   const tracer = MikroTrace.start();
+  tracer.setSamplingRate(0);
   const span = tracer.start('First span');
 
   const header = tracer.getTraceHeader(span.getConfiguration());
   const [version, traceId, parentId, traceFlags] = header.split('-');
 
   span.end();
+
+  tracer.setSamplingRate(100);
 
   t.is(version, '00');
   t.is(traceId.length, 32);
@@ -436,10 +439,11 @@ test.serial('It should produce valid content for a non-sampled W3C "traceheader"
 
 test.serial('It should produce valid content for a sampled W3C "traceheader" header', (t) => {
   const tracer = MikroTrace.start();
+  tracer.setSamplingRate(100);
   const span = tracer.start('First span');
   const innerSpan = tracer.start('Second span');
 
-  const header = tracer.getTraceHeader(span.getConfiguration(), true);
+  const header = tracer.getTraceHeader(span.getConfiguration());
   const [version, traceId, parentId, traceFlags] = header.split('-');
 
   innerSpan.end();
@@ -449,6 +453,80 @@ test.serial('It should produce valid content for a sampled W3C "traceheader" hea
   t.is(traceId.length, 32);
   t.is(parentId.length, 16);
   t.is(traceFlags, '01');
+});
+
+test.serial('It should set the debug sampling rate through an environment variable', (t) => {
+  const expected = 0.5;
+  process.env.MIKROTRACE_SAMPLE_RATE = `${expected}`;
+
+  MikroTrace.reset(); // Needed as `initSampleLevel()` is only run at init-time
+  const tracer = MikroTrace.start();
+  // @ts-ignore
+  const result = tracer.setSamplingRate();
+  t.is(result, expected);
+
+  // Reset
+  tracer.setSamplingRate(100);
+  process.env.MIKROTRACE_SAMPLE_RATE = undefined;
+});
+
+test.serial('It should return the current trace sampling rate when given a string value', (t) => {
+  const tracer = MikroTrace.start();
+  const expected = 100;
+  // @ts-ignore
+  const newSamplingRate = tracer.setSamplingRate('10273124');
+  t.is(newSamplingRate, expected);
+});
+
+test.serial('It should return the current trace sampling rate when given an object value', (t) => {
+  const tracer = MikroTrace.start();
+  const expected = 100;
+  // @ts-ignore
+  const newSamplingRate = tracer.setSamplingRate({ asdf: 123 });
+  t.is(newSamplingRate, expected);
+});
+
+test.serial(
+  'It should set a new trace sampling rate when given a number between 0 and 100',
+  (t) => {
+    const tracer = MikroTrace.start();
+    const expected = 5;
+    const newSamplingRate = tracer.setSamplingRate(expected);
+    t.is(newSamplingRate, expected);
+  }
+);
+
+test.serial('It should set the trace sampling rate to 0 when given a number lower than 0', (t) => {
+  const tracer = MikroTrace.start();
+  const expected = 0;
+  const newSamplingRate = tracer.setSamplingRate(-4);
+  t.is(newSamplingRate, expected);
+});
+
+test.serial(
+  'It should set the trace sampling rate to 100 when given a number higher than than 100',
+  (t) => {
+    const tracer = MikroTrace.start();
+    const expected = 100;
+    const newSamplingRate = tracer.setSamplingRate(10273124);
+    t.is(newSamplingRate, expected);
+  }
+);
+
+test.serial('It should have all logs being sampled at init time', (t) => {
+  const tracer = MikroTrace.start();
+  const expected = true;
+  const sampling = tracer.isTraceSampled();
+  t.is(sampling, expected);
+});
+
+test.serial('It should not sample logs when setting the sampling rate to 0', (t) => {
+  const tracer = MikroTrace.start();
+  const expected = false;
+  tracer.setSamplingRate(0);
+  tracer.start('My span');
+  const sampling = tracer.isTraceSampled();
+  t.is(sampling, expected);
 });
 
 /**
