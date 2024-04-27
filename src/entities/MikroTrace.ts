@@ -1,18 +1,22 @@
 import { getMetadata } from 'aws-metadata-utils';
 
-import { Span } from './Span';
+import { Span } from './Span.js';
 
-import { SpanRepresentation, MikroTraceInput, MikroTraceEnrichInput } from '../interfaces/Tracer';
-import { StaticMetadataConfigInput } from '../interfaces/Metadata';
+import {
+  SpanRepresentation,
+  MikroTraceInput,
+  MikroTraceEnrichInput
+} from '../interfaces/Tracer.js';
+import { StaticMetadataConfigInput } from '../interfaces/Metadata.js';
 
-import { getRandomBytes } from '../frameworks/getRandomBytes';
+import { getRandomBytes } from '../frameworks/getRandomBytes.js';
 
 import {
   MissingParentSpanError,
   MissingSpanNameError,
   SpanAlreadyExistsError
-} from '../application/errors/errors';
-import { SpanConfiguration } from '../interfaces/Span';
+} from '../application/errors/errors.js';
+import { SpanConfiguration } from '../interfaces/Span.js';
 
 /**
  * @description Custom basic tracer that mildly emulates OpenTelemetry semantics

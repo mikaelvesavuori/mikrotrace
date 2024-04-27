@@ -1,8 +1,8 @@
-import { MikroTrace } from './MikroTrace';
+import { MikroTrace } from './MikroTrace.js';
 
-import { SpanConfiguration, SpanInput } from '../interfaces/Span';
+import { SpanConfiguration, SpanInput } from '../interfaces/Span.js';
 
-import { getRandomBytes } from '../frameworks/getRandomBytes';
+import { getRandomBytes } from '../frameworks/getRandomBytes.js';
 
 /**
  * @description Produces valid invariants of the actual `Span`.

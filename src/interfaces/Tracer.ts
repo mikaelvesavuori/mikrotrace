@@ -1,6 +1,6 @@
-import { Span } from '../entities/Span';
+import { Span } from '../entities/Span.js';
 
-import { StaticMetadataConfigInput } from './Metadata';
+import { StaticMetadataConfigInput } from './Metadata.js';
 
 /**
  * @description Input when creating a new `MikroTrace` instance.

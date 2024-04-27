@@ -75,7 +75,7 @@ EXAMPLE OUTPUT BELOW
   functionVersion: '$LATEST',
   region: 'eu-north-1',
   resource: '/functionName',
-  runtime: 'AWS_Lambda_nodejs16.x',
+  runtime: 'AWS_Lambda_nodejs20.x',
   stage: 'shared',
   timestampRequest: '1657389598171',
   user: 'some user',

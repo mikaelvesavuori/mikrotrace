@@ -1,1 +1,1 @@
-export * from './entities/MikroTrace';
+export * from './entities/MikroTrace.js';

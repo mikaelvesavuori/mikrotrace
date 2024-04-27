@@ -1,5 +1,6 @@
-import { MikroTrace } from '../entities/MikroTrace';
-import { DynamicMetadata } from './Metadata';
+import { MikroTrace } from '../entities/MikroTrace.js';
+
+import { DynamicMetadata } from './Metadata.js';
 
 /**
  * @description The configuration shape of a `Span`. This configuration is
